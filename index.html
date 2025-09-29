@@ -5,354 +5,314 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SplitWisely - Smart Expense Sharing</title>
     <meta name="description" content="Split expenses effortlessly with friends, family, and roommates. Track shared costs, settle debts, and manage group finances seamlessly.">
+    <meta name="theme-color" content="#3b82f6">
+    <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <!-- Header -->
-    <header class="header">
-        <nav class="nav">
-            <div class="nav-container">
-                <div class="nav-logo">
+    <!-- App Container -->
+    <div id="app" class="app">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <div class="logo">
                     <i class="fas fa-calculator"></i>
                     <span>SplitWisely</span>
                 </div>
-                <ul class="nav-menu" id="nav-menu">
-                    <li><a href="#home" class="nav-link">Home</a></li>
-                    <li><a href="#features" class="nav-link">Features</a></li>
-                    <li><a href="#how-it-works" class="nav-link">How It Works</a></li>
-                    <li><a href="#pricing" class="nav-link">Pricing</a></li>
-                    <li><a href="#contact" class="nav-link">Contact</a></li>
-                    <li><a href="#" class="nav-link nav-cta">Get Started</a></li>
-                </ul>
-                <div class="nav-toggle" id="nav-toggle">
-                    <span></span>
-                    <span></span>
-                    <span></span>
+                <div class="header-actions">
+                    <button id="theme-toggle" class="icon-btn" title="Toggle dark mode">
+                        <i class="fas fa-moon"></i>
+                    </button>
+                    <button id="menu-toggle" class="icon-btn mobile-only" title="Menu">
+                        <i class="fas fa-bars"></i>
+                    </button>
                 </div>
+            </div>
+        </header>
+
+        <!-- Navigation -->
+        <nav class="nav" id="nav">
+            <div class="nav-content">
+                <button class="nav-item" data-view="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </button>
+                <button class="nav-item" data-view="groups">
+                    <i class="fas fa-users"></i>
+                    <span>Groups</span>
+                </button>
+                <button class="nav-item" data-view="expenses">
+                    <i class="fas fa-receipt"></i>
+                    <span>Expenses</span>
+                </button>
+                <button class="nav-item" data-view="balances">
+                    <i class="fas fa-balance-scale"></i>
+                    <span>Balances</span>
+                </button>
+                <button class="nav-item" data-view="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Settings</span>
+                </button>
             </div>
         </nav>
-    </header>
 
-    <!-- Main Content -->
-    <main>
-        <!-- Hero Section -->
-        <section id="home" class="hero">
-            <div class="container">
-                <div class="hero-content">
-                    <div class="hero-text">
-                        <h1 class="hero-title">
-                            Split Expenses <span class="highlight">Smartly</span>
-                        </h1>
-                        <p class="hero-description">
-                            Stop the awkward money conversations. SplitWisely makes sharing expenses 
-                            with friends, roommates, and family effortless and transparent.
-                        </p>
-                        <div class="hero-buttons">
-                            <a href="#" class="btn btn-primary">Start Splitting</a>
-                            <a href="#features" class="btn btn-secondary">Learn More</a>
+        <!-- Main Content -->
+        <main class="main">
+            <!-- Dashboard View -->
+            <div id="dashboard-view" class="view active">
+                <div class="view-header">
+                    <h1>Dashboard</h1>
+                    <button class="btn btn-primary" id="quick-add-expense">
+                        <i class="fas fa-plus"></i>
+                        Add Expense
+                    </button>
+                </div>
+                <div class="dashboard-grid">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Recent Groups</h3>
+                            <button class="btn btn-outline btn-sm" id="view-all-groups">View All</button>
                         </div>
-                        <div class="hero-stats">
-                            <div class="stat">
-                                <span class="stat-number">50K+</span>
-                                <span class="stat-label">Active Users</span>
-                            </div>
-                            <div class="stat">
-                                <span class="stat-number">$2M+</span>
-                                <span class="stat-label">Split Successfully</span>
-                            </div>
-                            <div class="stat">
-                                <span class="stat-number">98%</span>
-                                <span class="stat-label">Satisfaction Rate</span>
+                        <div class="card-content" id="recent-groups">
+                            <div class="empty-state">
+                                <i class="fas fa-users"></i>
+                                <p>No groups yet. Create your first group to get started!</p>
+                                <button class="btn btn-primary" id="create-first-group">Create Group</button>
                             </div>
                         </div>
                     </div>
-                    <div class="hero-image">
-                        <div class="phone-mockup">
-                            <i class="fas fa-mobile-alt"></i>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Your Balance</h3>
+                        </div>
+                        <div class="card-content" id="balance-summary">
+                            <div class="balance-item">
+                                <span class="balance-label">You owe</span>
+                                <span class="balance-amount owe" id="total-owe">$0.00</span>
+                            </div>
+                            <div class="balance-item">
+                                <span class="balance-label">You are owed</span>
+                                <span class="balance-amount owed" id="total-owed">$0.00</span>
+                            </div>
+                            <div class="balance-item total">
+                                <span class="balance-label">Net balance</span>
+                                <span class="balance-amount" id="net-balance">$0.00</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Recent Expenses</h3>
+                            <button class="btn btn-outline btn-sm" id="view-all-expenses">View All</button>
+                        </div>
+                        <div class="card-content" id="recent-expenses">
+                            <div class="empty-state">
+                                <i class="fas fa-receipt"></i>
+                                <p>No expenses yet. Add your first expense!</p>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
 
-        <!-- Features Section -->
-        <section id="features" class="features">
-            <div class="container">
-                <div class="section-header">
-                    <h2 class="section-title">Why Choose SplitWisely?</h2>
-                    <p class="section-description">
-                        Designed with simplicity and fairness in mind, our platform makes expense sharing a breeze.
-                    </p>
+            <!-- Groups View -->
+            <div id="groups-view" class="view">
+                <div class="view-header">
+                    <h1>Groups</h1>
+                    <button class="btn btn-primary" id="create-group-btn">
+                        <i class="fas fa-plus"></i>
+                        Create Group
+                    </button>
                 </div>
-                <div class="features-grid">
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-users"></i>
-                        </div>
-                        <h3 class="feature-title">Group Management</h3>
-                        <p class="feature-description">
-                            Create groups for different occasions - trips, roommates, dinners, or any shared expense scenario.
-                        </p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-receipt"></i>
-                        </div>
-                        <h3 class="feature-title">Smart Expense Tracking</h3>
-                        <p class="feature-description">
-                            Add expenses with photos of receipts, categorize spending, and track who owes what in real-time.
-                        </p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-balance-scale"></i>
-                        </div>
-                        <h3 class="feature-title">Fair Split Calculations</h3>
-                        <p class="feature-description">
-                            Multiple split options: equal, by percentage, by exact amount, or by who consumed what.
-                        </p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-credit-card"></i>
-                        </div>
-                        <h3 class="feature-title">Easy Payments</h3>
-                        <p class="feature-description">
-                            Integrated payment options make settling debts quick and hassle-free with multiple payment methods.
-                        </p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-chart-pie"></i>
-                        </div>
-                        <h3 class="feature-title">Spending Insights</h3>
-                        <p class="feature-description">
-                            Visualize your spending patterns with detailed reports and analytics for better financial awareness.
-                        </p>
-                    </div>
-                    <div class="feature-card">
-                        <div class="feature-icon">
-                            <i class="fas fa-shield-alt"></i>
-                        </div>
-                        <h3 class="feature-title">Secure & Private</h3>
-                        <p class="feature-description">
-                            Bank-level security ensures your financial data is protected with end-to-end encryption.
-                        </p>
-                    </div>
+                <div class="groups-grid" id="groups-grid">
+                    <!-- Groups will be populated here -->
                 </div>
             </div>
-        </section>
 
-        <!-- How It Works Section -->
-        <section id="how-it-works" class="how-it-works">
-            <div class="container">
-                <div class="section-header">
-                    <h2 class="section-title">How It Works</h2>
-                    <p class="section-description">
-                        Get started in minutes with our simple three-step process.
-                    </p>
+            <!-- Expenses View -->
+            <div id="expenses-view" class="view">
+                <div class="view-header">
+                    <h1>Expenses</h1>
+                    <div class="view-actions">
+                        <select id="expense-group-filter" class="form-select">
+                            <option value="">All Groups</option>
+                        </select>
+                        <button class="btn btn-primary" id="add-expense-btn">
+                            <i class="fas fa-plus"></i>
+                            Add Expense
+                        </button>
+                    </div>
                 </div>
-                <div class="steps">
-                    <div class="step">
-                        <div class="step-number">1</div>
-                        <div class="step-content">
-                            <h3 class="step-title">Create a Group</h3>
-                            <p class="step-description">
-                                Add friends, roommates, or travel companions to your expense group.
-                            </p>
+                <div class="expenses-list" id="expenses-list">
+                    <!-- Expenses will be populated here -->
+                </div>
+            </div>
+
+            <!-- Balances View -->
+            <div id="balances-view" class="view">
+                <div class="view-header">
+                    <h1>Balances</h1>
+                    <button class="btn btn-secondary" id="settle-all-btn">
+                        <i class="fas fa-handshake"></i>
+                        Settle All
+                    </button>
+                </div>
+                <div class="balances-content" id="balances-content">
+                    <!-- Balances will be populated here -->
+                </div>
+            </div>
+
+            <!-- Settings View -->
+            <div id="settings-view" class="view">
+                <div class="view-header">
+                    <h1>Settings</h1>
+                </div>
+                <div class="settings-content">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>Data Management</h3>
+                        </div>
+                        <div class="card-content">
+                            <div class="setting-item">
+                                <label>Export Data</label>
+                                <button class="btn btn-outline" id="export-data-btn">
+                                    <i class="fas fa-download"></i>
+                                    Export JSON
+                                </button>
+                            </div>
+                            <div class="setting-item">
+                                <label>Import Data</label>
+                                <input type="file" id="import-file" accept=".json" style="display: none;">
+                                <button class="btn btn-outline" id="import-data-btn">
+                                    <i class="fas fa-upload"></i>
+                                    Import JSON
+                                </button>
+                            </div>
+                            <div class="setting-item">
+                                <label>Clear All Data</label>
+                                <button class="btn btn-danger" id="clear-data-btn">
+                                    <i class="fas fa-trash"></i>
+                                    Clear Data
+                                </button>
+                            </div>
                         </div>
                     </div>
-                    <div class="step">
-                        <div class="step-number">2</div>
-                        <div class="step-content">
-                            <h3 class="step-title">Add Expenses</h3>
-                            <p class="step-description">
-                                Upload receipts, categorize expenses, and choose how to split costs fairly.
-                            </p>
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>App Info</h3>
                         </div>
-                    </div>
-                    <div class="step">
-                        <div class="step-number">3</div>
-                        <div class="step-content">
-                            <h3 class="step-title">Settle Up</h3>
-                            <p class="step-description">
-                                See who owes what and settle debts instantly with integrated payment options.
-                            </p>
+                        <div class="card-content">
+                            <div class="setting-item">
+                                <label>Version</label>
+                                <span>1.0.0</span>
+                            </div>
+                            <div class="setting-item">
+                                <label>Storage Used</label>
+                                <span id="storage-usage">0 KB</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </section>
+        </main>
 
-        <!-- Pricing Section -->
-        <section id="pricing" class="pricing">
-            <div class="container">
-                <div class="section-header">
-                    <h2 class="section-title">Simple, Transparent Pricing</h2>
-                    <p class="section-description">
-                        Choose the plan that works best for you and your group.
-                    </p>
+        <!-- Modals -->
+        <div id="modal-overlay" class="modal-overlay">
+            <!-- Create Group Modal -->
+            <div id="create-group-modal" class="modal">
+                <div class="modal-header">
+                    <h2>Create New Group</h2>
+                    <button class="modal-close">&times;</button>
                 </div>
-                <div class="pricing-grid">
-                    <div class="pricing-card">
-                        <div class="pricing-header">
-                            <h3 class="pricing-title">Free</h3>
-                            <div class="pricing-price">
-                                <span class="price">$0</span>
-                                <span class="period">/month</span>
-                            </div>
-                        </div>
-                        <ul class="pricing-features">
-                            <li><i class="fas fa-check"></i> Up to 3 groups</li>
-                            <li><i class="fas fa-check"></i> Basic expense tracking</li>
-                            <li><i class="fas fa-check"></i> Simple split calculations</li>
-                            <li><i class="fas fa-check"></i> Email notifications</li>
-                        </ul>
-                        <a href="#" class="btn btn-outline">Get Started</a>
+                <form id="create-group-form" class="modal-body">
+                    <div class="form-group">
+                        <label for="group-name">Group Name</label>
+                        <input type="text" id="group-name" required placeholder="e.g., Trip to Paris">
                     </div>
-                    <div class="pricing-card featured">
-                        <div class="pricing-badge">Most Popular</div>
-                        <div class="pricing-header">
-                            <h3 class="pricing-title">Pro</h3>
-                            <div class="pricing-price">
-                                <span class="price">$4.99</span>
-                                <span class="period">/month</span>
-                            </div>
-                        </div>
-                        <ul class="pricing-features">
-                            <li><i class="fas fa-check"></i> Unlimited groups</li>
-                            <li><i class="fas fa-check"></i> Advanced expense tracking</li>
-                            <li><i class="fas fa-check"></i> Receipt scanning</li>
-                            <li><i class="fas fa-check"></i> Spending analytics</li>
-                            <li><i class="fas fa-check"></i> Priority support</li>
-                        </ul>
-                        <a href="#" class="btn btn-primary">Choose Pro</a>
+                    <div class="form-group">
+                        <label for="group-description">Description (optional)</label>
+                        <input type="text" id="group-description" placeholder="What's this group for?">
                     </div>
-                    <div class="pricing-card">
-                        <div class="pricing-header">
-                            <h3 class="pricing-title">Team</h3>
-                            <div class="pricing-price">
-                                <span class="price">$9.99</span>
-                                <span class="period">/month</span>
-                            </div>
+                    <div class="form-group">
+                        <label>Members</label>
+                        <div class="members-input">
+                            <input type="text" id="member-name" placeholder="Add member name">
+                            <button type="button" id="add-member" class="btn btn-outline btn-sm">Add</button>
                         </div>
-                        <ul class="pricing-features">
-                            <li><i class="fas fa-check"></i> Everything in Pro</li>
-                            <li><i class="fas fa-check"></i> Admin controls</li>
-                            <li><i class="fas fa-check"></i> Advanced reporting</li>
-                            <li><i class="fas fa-check"></i> API access</li>
-                            <li><i class="fas fa-check"></i> 24/7 support</li>
-                        </ul>
-                        <a href="#" class="btn btn-outline">Contact Sales</a>
+                        <div id="members-list" class="members-list"></div>
                     </div>
-                </div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-outline modal-cancel">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Create Group</button>
+                    </div>
+                </form>
             </div>
-        </section>
 
-        <!-- Contact Section -->
-        <section id="contact" class="contact">
-            <div class="container">
-                <div class="contact-content">
-                    <div class="contact-info">
-                        <h2 class="section-title">Get in Touch</h2>
-                        <p class="section-description">
-                            Have questions? We're here to help you get the most out of SplitWisely.
-                        </p>
-                        <div class="contact-methods">
-                            <div class="contact-method">
-                                <i class="fas fa-envelope"></i>
-                                <div>
-                                    <h4>Email Us</h4>
-                                    <p>support@splitwisely.com</p>
-                                </div>
-                            </div>
-                            <div class="contact-method">
-                                <i class="fas fa-phone"></i>
-                                <div>
-                                    <h4>Call Us</h4>
-                                    <p>+1 (555) 123-4567</p>
-                                </div>
-                            </div>
-                            <div class="contact-method">
-                                <i class="fas fa-comments"></i>
-                                <div>
-                                    <h4>Live Chat</h4>
-                                    <p>Available 24/7</p>
-                                </div>
-                            </div>
+            <!-- Add Expense Modal -->
+            <div id="add-expense-modal" class="modal">
+                <div class="modal-header">
+                    <h2>Add Expense</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <form id="add-expense-form" class="modal-body">
+                    <div class="form-group">
+                        <label for="expense-description">Description</label>
+                        <input type="text" id="expense-description" required placeholder="e.g., Dinner at restaurant">
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-amount">Amount</label>
+                        <input type="number" id="expense-amount" step="0.01" required placeholder="0.00">
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-group">Group</label>
+                        <select id="expense-group" required>
+                            <option value="">Select a group</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="expense-payer">Paid by</label>
+                        <select id="expense-payer" required>
+                            <option value="">Select who paid</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Split method</label>
+                        <div class="split-method-tabs">
+                            <button type="button" class="split-tab active" data-method="equal">Equal</button>
+                            <button type="button" class="split-tab" data-method="custom">Custom</button>
+                        </div>
+                        <div id="split-details" class="split-details">
+                            <!-- Split details will be populated here -->
                         </div>
                     </div>
-                    <div class="contact-form">
-                        <form>
-                            <div class="form-group">
-                                <input type="text" placeholder="Your Name" required>
-                            </div>
-                            <div class="form-group">
-                                <input type="email" placeholder="Your Email" required>
-                            </div>
-                            <div class="form-group">
-                                <textarea placeholder="Your Message" rows="5" required></textarea>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Send Message</button>
-                        </form>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-outline modal-cancel">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Expense</button>
                     </div>
-                </div>
+                </form>
             </div>
-        </section>
-    </main>
 
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <div class="footer-content">
-                <div class="footer-section">
-                    <div class="footer-logo">
-                        <i class="fas fa-calculator"></i>
-                        <span>SplitWisely</span>
-                    </div>
-                    <p>Making expense sharing simple, fair, and stress-free for everyone.</p>
-                    <div class="social-links">
-                        <a href="#"><i class="fab fa-twitter"></i></a>
-                        <a href="#"><i class="fab fa-facebook"></i></a>
-                        <a href="#"><i class="fab fa-instagram"></i></a>
-                        <a href="#"><i class="fab fa-linkedin"></i></a>
+            <!-- Settle Balance Modal -->
+            <div id="settle-modal" class="modal">
+                <div class="modal-header">
+                    <h2>Settle Balance</h2>
+                    <button class="modal-close">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="settle-details"></div>
+                    <div class="modal-actions">
+                        <button type="button" class="btn btn-outline modal-cancel">Cancel</button>
+                        <button type="button" class="btn btn-primary" id="confirm-settle">Settle</button>
                     </div>
                 </div>
-                <div class="footer-section">
-                    <h4>Product</h4>
-                    <ul>
-                        <li><a href="#">Features</a></li>
-                        <li><a href="#">Pricing</a></li>
-                        <li><a href="#">Security</a></li>
-                        <li><a href="#">Updates</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Company</h4>
-                    <ul>
-                        <li><a href="#">About Us</a></li>
-                        <li><a href="#">Careers</a></li>
-                        <li><a href="#">Press</a></li>
-                        <li><a href="#">Blog</a></li>
-                    </ul>
-                </div>
-                <div class="footer-section">
-                    <h4>Support</h4>
-                    <ul>
-                        <li><a href="#">Help Center</a></li>
-                        <li><a href="#">Contact</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Terms of Service</a></li>
-                    </ul>
-                </div>
-            </div>
-            <div class="footer-bottom">
-                <p>&copy; 2025 SplitWisely. All rights reserved.</p>
             </div>
         </div>
-    </footer>
+
+        <!-- Toast Notifications -->
+        <div id="toast-container" class="toast-container"></div>
+    </div>
 
     <script src="script.js"></script>
 </body>

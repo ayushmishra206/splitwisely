@@ -1,158 +1,267 @@
-# SplitWisely - Static Website
+# SplitWisely - Expense Sharing Web App
 
-A modern, responsive static website for SplitWisely, a smart expense sharing application. This website showcases the features and benefits of the app with a clean, professional design.
+A modern, responsive web application for splitting expenses with friends, family, and roommates. Built with vanilla JavaScript, this PWA (Progressive Web App) runs entirely in the browser with offline support and localStorage persistence.
 
 ## 🌟 Features
 
-- **Responsive Design**: Fully responsive layout that works on all devices
-- **Modern UI/UX**: Clean, contemporary design with smooth animations
-- **Interactive Elements**: Mobile navigation, smooth scrolling, and hover effects
-- **Performance Optimized**: Fast loading with optimized CSS and JavaScript
-- **Accessibility**: Semantic HTML and keyboard navigation support
-- **Cross-browser Compatible**: Works on all modern browsers
+### Core Functionality
+- **Group Management**: Create and manage expense groups
+- **Smart Expense Tracking**: Add expenses with flexible split methods
+- **Balance Calculations**: Automatic calculation of who owes whom
+- **Settlement Optimization**: Minimize the number of transactions needed
+- **Data Persistence**: All data stored locally in browser
+
+### User Experience
+- **Responsive Design**: Works perfectly on desktop, tablet, and mobile
+- **Dark Mode**: Toggle between light and dark themes
+- **PWA Support**: Install as an app on mobile devices
+- **Offline Capable**: Works without internet connection
+- **Export/Import**: Backup and restore data as JSON
+
+### Split Methods
+- **Equal Split**: Divide expenses equally among members
+- **Custom Split**: Specify exact amounts for each person
+- **Flexible Members**: Add/remove people from specific expenses
 
 ## 📁 Project Structure
 
 ```
 splitwisely/
-├── index.html          # Main HTML file
-├── styles.css          # CSS styles and responsive design
-├── script.js           # JavaScript functionality
-└── README.md           # Project documentation
+├── index.html          # Main application HTML
+├── styles.css          # Complete CSS with dark mode
+├── script.js           # Full JavaScript application
+├── manifest.json       # PWA manifest
+├── sw.js              # Service worker for offline support
+├── .github/
+│   └── workflows/
+│       └── deploy.yml  # GitHub Pages deployment
+└── README.md          # This documentation
 ```
 
-## 🚀 Getting Started
+## 🚀 Quick Start
 
-### Prerequisites
+### Option 1: GitHub Pages (Recommended)
+1. **Fork this repository** on GitHub
+2. **Enable GitHub Pages** in repository settings
+3. **Access your app** at `https://yourusername.github.io/splitwisely`
 
-- A modern web browser (Chrome, Firefox, Safari, Edge)
-- No server required - this is a static website
+### Option 2: Local Development
+1. **Clone the repository**:
+   ```bash
+   git clone https://github.com/yourusername/splitwisely.git
+   cd splitwisely
+   ```
 
-### Running the Website
+2. **Open in browser**: Double-click `index.html` or use a local server
 
-1. **Download or Clone**: Get the project files to your local machine
-2. **Open in Browser**: Simply double-click `index.html` or right-click and "Open with" your preferred browser
-3. **Live Server (Optional)**: For development, use a live server extension in your code editor
+3. **Live Server (VS Code)**:
+   - Install "Live Server" extension
+   - Right-click `index.html` → "Open with Live Server"
+   - App opens at `http://localhost:5500`
 
-### Using VS Code Live Server
+### Option 3: Deploy to Other Platforms
+- **Netlify**: Drag and drop the folder to Netlify
+- **Vercel**: Import the GitHub repository
+- **GitHub Codespaces**: Open directly in browser IDE
 
-1. Install the "Live Server" extension in VS Code
-2. Right-click on `index.html`
-3. Select "Open with Live Server"
-4. The website will open at `http://localhost:5500`
+## 🎯 How to Use
 
-## 🎨 Design Features
+### 1. Create Your First Group
+- Click "Create Group" on the dashboard
+- Add group name and description
+- Add members (friends, roommates, etc.)
+- Save the group
 
-### Color Scheme
-- **Primary**: Blue (#3b82f6)
-- **Secondary**: Green (#10b981)
-- **Accent**: Amber (#f59e0b)
-- **Text**: Dark gray (#1f2937)
-- **Background**: White and light gray variants
+### 2. Add Expenses
+- Click "Add Expense" button
+- Enter description and amount
+- Select who paid
+- Choose split method (equal or custom)
+- Save the expense
 
-### Typography
-- **Font Family**: Inter (Google Fonts)
-- **Responsive Text**: Fluid typography that scales with screen size
-- **Hierarchy**: Clear heading structure for accessibility
+### 3. View Balances
+- Go to "Balances" tab
+- See who owes whom
+- Click "Settle" to mark debts as paid
+- Optimized settlements minimize transactions
 
-### Sections
-1. **Hero Section**: Eye-catching introduction with key statistics
-2. **Features**: Six key features with icons and descriptions
-3. **How It Works**: Three-step process explanation
-4. **Pricing**: Three-tier pricing table
-5. **Contact**: Contact form and information
-6. **Footer**: Links and social media
+### 4. Manage Data
+- **Export**: Backup data as JSON file
+- **Import**: Restore from backup
+- **Dark Mode**: Toggle in header
+- **Mobile**: Works perfectly on phones
 
-## 📱 Responsive Breakpoints
+## 🏗️ Technical Architecture
 
-- **Desktop**: 1200px and above
-- **Tablet**: 768px - 1199px
-- **Mobile**: Below 768px
-- **Small Mobile**: Below 480px
+### Frontend Stack
+- **HTML5**: Semantic structure with accessibility features
+- **CSS3**: Modern layout with CSS Grid/Flexbox
+- **Vanilla JavaScript**: No frameworks - fast and lightweight
+- **localStorage**: Client-side data persistence
+- **Service Worker**: Offline functionality and caching
 
-## ⚡ Performance Features
+### Key Features
+- **Mobile-First**: Responsive design optimized for mobile
+- **Dark Mode**: Automatic theme switching with persistence
+- **PWA**: Installable with offline support
+- **Performance**: Optimized for fast loading and smooth interactions
+- **Accessibility**: WCAG compliant with keyboard navigation
 
-- **CSS Variables**: Consistent theming and easy customization
-- **Optimized Images**: Placeholder for future image optimization
-- **Debounced Scroll**: Performance-optimized scroll event handling
-- **Lazy Loading**: Ready for image lazy loading implementation
-- **Minification Ready**: Code structure ready for minification
+## 💾 Data Management
 
-## 🛠️ Customization
+### Storage
+- All data stored in browser's localStorage
+- No external database required
+- Data persists across browser sessions
+- Export/import for backup and migration
 
-### Colors
-Update CSS variables in `styles.css`:
-```css
-:root {
-    --primary-color: #3b82f6;
-    --secondary-color: #10b981;
-    /* ... other variables */
+### Data Structure
+```javascript
+{
+  groups: [
+    {
+      id: "unique-id",
+      name: "Trip to Paris",
+      description: "Summer vacation",
+      members: ["Alice", "Bob", "Charlie"],
+      createdAt: "2025-01-01T00:00:00.000Z"
+    }
+  ],
+  expenses: [
+    {
+      id: "unique-id",
+      description: "Hotel booking",
+      amount: 300.00,
+      groupId: "group-id",
+      paidBy: "Alice",
+      splits: {
+        "Alice": 100.00,
+        "Bob": 100.00,
+        "Charlie": 100.00
+      },
+      date: "2025-01-01T00:00:00.000Z"
+    }
+  ]
 }
 ```
 
-### Content
-Edit the content directly in `index.html`:
-- Company name and branding
-- Feature descriptions
-- Pricing tiers
-- Contact information
+## 🎨 Customization
 
-### Styling
-Modify `styles.css` to change:
-- Layout and spacing
-- Typography
-- Colors and themes
-- Responsive breakpoints
+### Theme Colors
+Edit CSS variables in `styles.css`:
+```css
+:root {
+    --primary-color: #3b82f6;      /* Blue */
+    --secondary-color: #10b981;    /* Green */
+    --danger-color: #ef4444;       /* Red */
+    --warning-color: #f59e0b;      /* Amber */
+}
+```
 
-## 📧 Contact Form
+### Adding New Features
+1. **New Views**: Add to navigation and create view HTML
+2. **Data Fields**: Extend data models in JavaScript
+3. **Calculations**: Modify balance calculation functions
+4. **UI Components**: Create reusable components
 
-The contact form includes:
-- **Client-side Validation**: Email format and required field validation
-- **User Feedback**: Success/error notifications
-- **Responsive Design**: Mobile-friendly form layout
+## 🚀 Deployment
 
-**Note**: The form currently shows a success message but doesn't actually send emails. To make it functional, you'll need to:
-1. Add a backend service (Node.js, PHP, etc.)
-2. Integrate with an email service (SendGrid, Mailgun, etc.)
-3. Or use a form service (Netlify Forms, Formspree, etc.)
+### GitHub Pages (Automatic)
+1. **Push to main branch** - Deployment is automatic
+2. **GitHub Actions** will build and deploy
+3. **Access your app** at your GitHub Pages URL
+
+### Manual Deployment
+Works on any static hosting service:
+- **Netlify**: Drag folder or connect Git
+- **Vercel**: Import repository
+- **Firebase Hosting**: `firebase deploy`
+- **AWS S3**: Upload files to bucket
+- **Any Web Server**: Upload files to public directory
+
+### Environment Setup
+No build process required! Just upload these files:
+- `index.html`
+- `styles.css`
+- `script.js`
+- `manifest.json`
+- `sw.js`
 
 ## 🌐 Browser Support
 
-- Chrome (latest)
-- Firefox (latest)
-- Safari (latest)
-- Edge (latest)
-- Mobile browsers (iOS Safari, Chrome Mobile)
+- **Chrome**: Full support with PWA features
+- **Firefox**: Full support
+- **Safari**: Full support (iOS 14+ for PWA)
+- **Edge**: Full support with PWA features
+- **Mobile**: Optimized for all mobile browsers
 
-## 📝 License
+## 📱 PWA Features
 
-This project is open source and available under the [MIT License](LICENSE).
+- **Installable**: Add to home screen on mobile
+- **Offline Work**: Use without internet
+- **App-like**: Runs in standalone mode
+- **Fast Loading**: Cached resources for speed
+
+## 🔒 Privacy & Security
+
+- **No Data Collection**: All data stays on your device
+- **No Tracking**: No analytics or user tracking
+- **Secure**: HTTPS required for PWA features
+- **Local Storage**: Data never leaves your browser
 
 ## 🤝 Contributing
 
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Test thoroughly
-5. Submit a pull request
+We welcome contributions! Here's how:
+
+1. **Fork** the repository
+2. **Create** a feature branch: `git checkout -b feature-name`
+3. **Make** your changes
+4. **Test** thoroughly on mobile and desktop
+5. **Submit** a pull request
+
+### Development Guidelines
+- Keep code vanilla JavaScript (no frameworks)
+- Maintain mobile-first responsive design
+- Test in multiple browsers
+- Follow existing code style
+- Update documentation
+
+## 📄 License
+
+This project is open source under the [MIT License](LICENSE).
+
+## 🔄 Roadmap
+
+### Phase 1 ✅
+- [x] Core expense splitting functionality
+- [x] Group management
+- [x] Balance calculations
+- [x] Dark mode support
+- [x] PWA features
+- [x] Export/import data
+
+### Phase 2 🚧
+- [ ] Receipt photo uploads
+- [ ] Expense categories
+- [ ] Payment integrations
+- [ ] Multi-currency support
+- [ ] Email notifications
+- [ ] Advanced reporting
+
+### Phase 3 📋
+- [ ] Real-time sync (WebRTC/Firebase)
+- [ ] User accounts and authentication
+- [ ] Mobile apps (React Native)
+- [ ] API for third-party integrations
 
 ## 📞 Support
 
-For questions or support:
-- Email: support@splitwisely.com
-- Create an issue in this repository
-- Check the documentation in the code comments
-
-## 🔄 Future Enhancements
-
-- [ ] Add blog section
-- [ ] Implement dark mode
-- [ ] Add more animations
-- [ ] Include testimonials section
-- [ ] Add language localization
-- [ ] Integrate with analytics
-- [ ] Add more interactive elements
+- **Issues**: [GitHub Issues](https://github.com/yourusername/splitwisely/issues)
+- **Discussions**: [GitHub Discussions](https://github.com/yourusername/splitwisely/discussions)
+- **Email**: Create an issue for support
 
 ---
 
-**Built with ❤️ for SplitWisely**
+**Built with ❤️ using vanilla web technologies**
+
+> A lightweight, fast, and privacy-focused alternative to expensive expense-sharing apps.
