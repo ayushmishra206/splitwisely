@@ -1,18 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
-import {
-  FiBarChart2,
-  FiCheckCircle,
-  FiFileText,
-  FiLogOut,
-  FiMenu,
-  FiMoon,
-  FiPlus,
-  FiSettings,
-  FiSun,
-  FiUsers,
-  FiX
-} from 'react-icons/fi';
+import { FiBarChart2, FiCheckCircle, FiFileText, FiLogOut, FiMoon, FiPlus, FiSettings, FiSun, FiUsers } from 'react-icons/fi';
 import DashboardPage from './pages/DashboardPage';
 import GroupsPage from './pages/GroupsPage';
 import ExpensesPage from './pages/ExpensesPage';
@@ -21,11 +9,18 @@ import SettingsPage from './pages/SettingsPage';
 import { useSupabase } from './providers/SupabaseProvider';
 import { AuthView } from './components/auth/AuthView';
 
-const navItems = [
+const sidebarNavItems = [
   { label: 'Dashboard', path: '/', icon: FiBarChart2 },
   { label: 'Groups', path: '/groups', icon: FiUsers },
   { label: 'Expenses', path: '/expenses', icon: FiFileText },
   { label: 'Settlements', path: '/settlements', icon: FiCheckCircle },
+  { label: 'Settings', path: '/settings', icon: FiSettings }
+];
+
+const mobileNavItems = [
+  { label: 'Dashboard', path: '/', icon: FiBarChart2 },
+  { label: 'Groups', path: '/groups', icon: FiUsers },
+  { label: 'Expenses', path: '/expenses', icon: FiFileText },
   { label: 'Settings', path: '/settings', icon: FiSettings }
 ];
 
@@ -78,7 +73,6 @@ const App = () => {
   const storedPreference = useRef(readStoredTheme());
   const [isDark, setIsDark] = useState<boolean>(() => storedPreference.current ?? prefersDarkMode());
   const [hasExplicitPreference, setHasExplicitPreference] = useState<boolean>(() => storedPreference.current !== null);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (typeof document === 'undefined') {
@@ -119,8 +113,6 @@ const App = () => {
       persistTheme(next);
       return next;
     });
-  const toggleSidebar = () => setIsSidebarOpen((value) => !value);
-  const closeSidebar = () => setIsSidebarOpen(false);
   const openQuickAddExpense = () => {
     navigate('/expenses', { state: { openCreate: true, token: Date.now() } });
   };
@@ -130,7 +122,8 @@ const App = () => {
   };
 
   const activeTitle = useMemo(() => {
-    const match = navItems.find((item) => item.path === location.pathname);
+    const allNavItems = [...sidebarNavItems, ...mobileNavItems];
+    const match = allNavItems.find((item) => item.path === location.pathname);
     return match?.label ?? 'Dashboard';
   }, [location.pathname]);
 
@@ -159,20 +152,7 @@ const App = () => {
 
   return (
     <div className="flex min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-200 text-slate-900 transition-colors duration-300 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-50">
-      <button
-        type="button"
-        className="fixed left-4 top-5 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-md lg:hidden dark:border-slate-700 dark:bg-slate-900"
-        onClick={toggleSidebar}
-        aria-label="Toggle navigation"
-      >
-        {isSidebarOpen ? <FiX className="h-5 w-5" /> : <FiMenu className="h-5 w-5" />}
-      </button>
-      <aside
-        className={
-          'fixed inset-y-0 left-0 z-20 w-72 transform border-r border-slate-200 bg-white/90 shadow-2xl backdrop-blur transition-transform duration-300 ease-in-out dark:border-slate-800 dark:bg-slate-950/80 lg:static lg:translate-x-0' +
-          (isSidebarOpen ? ' translate-x-0' : ' -translate-x-full lg:translate-x-0')
-        }
-      >
+      <aside className="hidden md:flex md:w-72 md:flex-col md:border-r md:border-slate-200 md:bg-white/90 md:shadow-2xl md:backdrop-blur dark:md:border-slate-800 dark:md:bg-slate-950/80">
         <div className="flex h-full flex-col">
           <div className="flex items-center gap-3 border-b border-slate-200 px-6 py-6 dark:border-slate-800">
             <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-md">
@@ -184,12 +164,11 @@ const App = () => {
             </div>
           </div>
           <nav className="flex-1 space-y-1 overflow-y-auto px-4 py-6">
-            {navItems.map(({ label, path, icon: Icon }) => (
+            {sidebarNavItems.map(({ label, path, icon: Icon }) => (
               <NavLink
                 key={path}
                 to={path}
                 end={path === '/'}
-                onClick={closeSidebar}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors ${
                     isActive
@@ -223,7 +202,7 @@ const App = () => {
           </div>
         </div>
       </aside>
-      <main className="relative flex min-h-screen flex-1 flex-col lg:ml-0">
+      <main className="relative flex min-h-screen flex-1 flex-col">
         <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
           <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 sm:py-5">
             <div>
@@ -248,13 +227,29 @@ const App = () => {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-3 lg:hidden">
+            <div className="flex items-center gap-2 lg:hidden">
               <button
                 type="button"
                 onClick={openQuickAddExpense}
                 className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-500"
               >
                 <FiPlus className="h-4 w-4" /> Add
+              </button>
+              <button
+                type="button"
+                onClick={toggleTheme}
+                aria-label={isDark ? 'Switch to light mode' : 'Switch to dark mode'}
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm transition hover:border-indigo-500 hover:text-indigo-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:border-indigo-400 dark:hover:text-indigo-300"
+              >
+                {isDark ? <FiSun className="h-4 w-4" /> : <FiMoon className="h-4 w-4" />}
+              </button>
+              <button
+                type="button"
+                onClick={signOut}
+                aria-label="Sign out"
+                className="flex h-10 w-10 items-center justify-center rounded-full border border-rose-200 bg-rose-50 text-rose-600 shadow-sm transition hover:border-rose-300 hover:bg-rose-100 dark:border-rose-800/80 dark:bg-rose-900/40 dark:text-rose-200 dark:hover:border-rose-700"
+              >
+                <FiLogOut className="h-4 w-4" />
               </button>
               <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
                 {user.email?.slice(0, 1).toUpperCase() ?? 'U'}
@@ -290,14 +285,13 @@ const App = () => {
         >
           <FiPlus className="h-6 w-6" />
         </button>
-        <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 lg:hidden">
+        <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 md:hidden">
           <div className="mx-auto flex max-w-6xl items-center justify-around px-2 py-3">
-            {navItems.map(({ label, path, icon: Icon }) => (
+            {mobileNavItems.map(({ label, path, icon: Icon }) => (
               <NavLink
                 key={path}
                 to={path}
                 end={path === '/'}
-                onClick={closeSidebar}
                 className={({ isActive }) =>
                   `flex flex-col items-center gap-1 rounded-xl px-3 py-1 text-xs font-medium transition-colors ${
                     isActive

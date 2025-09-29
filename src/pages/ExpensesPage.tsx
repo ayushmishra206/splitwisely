@@ -269,8 +269,9 @@ const ExpensesPage = () => {
   const renderedExpenses = useMemo(
     () =>
       expenses.map((expense) => {
-        const participants = expense.expense_splits ?? [];
-        const currency = expense.group?.currency ?? 'USD';
+  const participants = expense.expense_splits ?? [];
+  const currency = expense.group?.currency ?? 'USD';
+  const formattedAmount = formatAmount(expense.amount ?? '0', currency);
         const payerName = expense.payer?.full_name ?? 'Someone';
         const participantNames = participants
           .map((split) => {
@@ -284,9 +285,9 @@ const ExpensesPage = () => {
         return (
           <article
             key={expense.id}
-            className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900"
+            className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg sm:p-6 dark:border-slate-800 dark:bg-slate-900"
           >
-            <header className="flex items-start justify-between gap-3">
+            <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
               <div>
                 <p className="text-xs uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">
                   {expense.group?.name ?? 'Ungrouped'}
@@ -298,23 +299,23 @@ const ExpensesPage = () => {
                   <FiCalendar className="h-4 w-4" /> {formatDate(expense.expense_date)}
                 </p>
               </div>
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-600 dark:border-indigo-500/40 dark:bg-indigo-900/30 dark:text-indigo-200">
-                <FiDollarSign className="h-4 w-4" /> {formatAmount(expense.amount, currency)}
+              <div className="inline-flex items-center justify-center self-start rounded-xl border border-slate-200 bg-indigo-50 px-3 py-2 text-sm font-semibold text-indigo-600 sm:self-center dark:border-indigo-500/40 dark:bg-indigo-900/30 dark:text-indigo-200">
+                {formattedAmount}
               </div>
             </header>
 
-            <dl className="mt-5 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-              <div className="flex items-center justify-between gap-3">
+            <dl className="mt-5 space-y-4 text-sm text-slate-600 dark:text-slate-300">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <dt className="flex items-center gap-2 font-medium text-slate-500 dark:text-slate-400">
                   <FiUser className="h-4 w-4" /> Paid by
                 </dt>
-                <dd className="text-right text-slate-700 dark:text-slate-200">{payerName}</dd>
+                <dd className="text-base font-semibold text-slate-800 dark:text-slate-100 sm:text-right">{payerName}</dd>
               </div>
               <div>
                 <dt className="flex items-center gap-2 font-medium text-slate-500 dark:text-slate-400">
                   <FiUsers className="h-4 w-4" /> Participants
                 </dt>
-                <dd className="mt-1 text-sm text-slate-700 dark:text-slate-200">
+                <dd className="mt-2 text-sm text-slate-700 dark:text-slate-200">
                   {participantNames.length ? participantNames : 'Split with group members'}
                 </dd>
               </div>
@@ -328,14 +329,14 @@ const ExpensesPage = () => {
               ) : null}
             </dl>
 
-            <div className="mt-6 flex items-center justify-between border-t border-slate-200 pt-4 dark:border-slate-800">
+            <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:items-center sm:justify-between dark:border-slate-800">
               <button
                 type="button"
                 onClick={() => {
                   setEditingExpense(expense);
                   setStatus(null);
                 }}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 sm:w-auto dark:border-slate-700 dark:text-slate-300 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
               >
                 <FiEdit2 className="h-4 w-4" /> Edit
               </button>
@@ -345,7 +346,7 @@ const ExpensesPage = () => {
                   setPendingDelete(expense);
                   setStatus(null);
                 }}
-                className="inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-rose-500 transition hover:border-rose-200 hover:bg-rose-50 dark:text-rose-300 dark:hover:border-rose-500/40 dark:hover:bg-rose-900/30"
+                className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-rose-500 transition hover:border-rose-200 hover:bg-rose-50 sm:w-auto dark:text-rose-300 dark:hover:border-rose-500/40 dark:hover:bg-rose-900/30"
               >
                 <FiTrash2 className="h-4 w-4" /> Delete
               </button>
@@ -410,7 +411,7 @@ const ExpensesPage = () => {
             setStatus(null);
             setIsCreateOpen(true);
           }}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+          className="hidden items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 md:inline-flex"
         >
           <FiPlus className="h-4 w-4" /> New expense
         </button>
@@ -563,6 +564,18 @@ const ExpensesPage = () => {
           </div>
         </div>
       </Modal>
+
+      <button
+        type="button"
+        onClick={() => {
+          setStatus(null);
+          setIsCreateOpen(true);
+        }}
+        className="fixed bottom-20 right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl transition hover:bg-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/40 md:hidden"
+        aria-label="Record expense"
+      >
+        <FiPlus className="h-6 w-6" />
+      </button>
     </section>
   );
 };

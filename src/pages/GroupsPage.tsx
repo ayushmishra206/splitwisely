@@ -384,7 +384,7 @@ const GroupsPage = () => {
             setStatus(null);
             setIsCreateOpen(true);
           }}
-          className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500"
+          className="hidden items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 md:inline-flex"
         >
           <FiPlus className="h-4 w-4" />
           New group
@@ -445,48 +445,50 @@ const GroupsPage = () => {
             return (
               <article
                 key={group.id}
-                className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900"
+                className="flex flex-col justify-between rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg sm:p-6 dark:border-slate-800 dark:bg-slate-900"
               >
-                <header className="space-y-1">
-                  <div className="flex items-start justify-between gap-2">
+                <header className="space-y-3">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                     <div>
                       <h3 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{group.name}</h3>
                       {group.description ? (
                         <p className="text-sm text-slate-600 dark:text-slate-300">{group.description}</p>
                       ) : null}
                     </div>
-                    <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
+                    <span className="inline-flex w-max rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:border-slate-700 dark:text-slate-400">
                       {group.currency}
                     </span>
                   </div>
                 </header>
 
-                <dl className="mt-6 grid gap-3 text-sm text-slate-600 dark:text-slate-300">
-                  <div className="flex items-center justify-between">
+                <dl className="mt-5 grid gap-4 text-sm text-slate-600 dark:text-slate-300">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <dt className="flex items-center gap-2 font-medium text-slate-500 dark:text-slate-400">
                       <FiUsers className="h-4 w-4" /> Members
                     </dt>
-                    <dd>{memberCount}</dd>
+                    <dd className="text-base font-semibold text-slate-800 dark:text-slate-100 sm:text-right">{memberCount}</dd>
                   </div>
                   {ownerProfile ? (
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                       <dt className="font-medium text-slate-500 dark:text-slate-400">Owner</dt>
-                      <dd className="truncate text-right text-slate-700 dark:text-slate-200">
+                      <dd className="truncate text-slate-700 dark:text-slate-200 sm:text-right">
                         {ownerProfile.full_name ?? 'You'}
                       </dd>
                     </div>
                   ) : null}
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                     <dt className="font-medium text-slate-500 dark:text-slate-400">Created</dt>
-                    <dd>{new Date(group.created_at).toLocaleDateString()}</dd>
+                    <dd className="text-slate-700 dark:text-slate-200 sm:text-right">
+                      {new Date(group.created_at).toLocaleDateString()}
+                    </dd>
                   </div>
                 </dl>
 
-                <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-800">
+                <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-4 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between dark:border-slate-800">
                   <button
                     type="button"
                     onClick={() => handleOpenMemberManager(group.id)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 sm:w-auto dark:border-slate-700 dark:text-slate-300 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
                   >
                     <FiUserPlus className="h-4 w-4" /> Members
                   </button>
@@ -496,7 +498,7 @@ const GroupsPage = () => {
                       setEditingGroup(group);
                       setStatus(null);
                     }}
-                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 dark:border-slate-700 dark:text-slate-300 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-slate-200 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-slate-600 transition hover:border-indigo-200 hover:text-indigo-600 sm:w-auto dark:border-slate-700 dark:text-slate-300 dark:hover:border-indigo-500 dark:hover:text-indigo-300"
                   >
                     <FiEdit2 className="h-4 w-4" /> Edit
                   </button>
@@ -506,7 +508,7 @@ const GroupsPage = () => {
                       setPendingDelete(group);
                       setStatus(null);
                     }}
-                    className="inline-flex items-center gap-2 rounded-xl border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-rose-500 transition hover:border-rose-200 hover:bg-rose-50 dark:text-rose-300 dark:hover:border-rose-500/40 dark:hover:bg-rose-900/30"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-transparent px-3 py-2 text-xs font-semibold uppercase tracking-wide text-rose-500 transition hover:border-rose-200 hover:bg-rose-50 sm:w-auto dark:text-rose-300 dark:hover:border-rose-500/40 dark:hover:bg-rose-900/30"
                   >
                     <FiTrash2 className="h-4 w-4" /> Delete
                   </button>
@@ -798,6 +800,18 @@ const GroupsPage = () => {
           </div>
         ) : null}
       </Modal>
+
+      <button
+        type="button"
+        onClick={() => {
+          setStatus(null);
+          setIsCreateOpen(true);
+        }}
+        className="fixed bottom-20 right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl transition hover:bg-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/40 md:hidden"
+        aria-label="Create group"
+      >
+        <FiPlus className="h-6 w-6" />
+      </button>
     </section>
   );
 };

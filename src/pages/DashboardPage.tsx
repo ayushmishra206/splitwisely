@@ -254,7 +254,7 @@ const DashboardPage = () => {
                 return (
                   <article
                     key={currency}
-                    className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900"
+                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg sm:p-6 dark:border-slate-800 dark:bg-slate-900"
                   >
                     <div className="flex items-center justify-between gap-3">
                       <div>
@@ -263,20 +263,24 @@ const DashboardPage = () => {
                       </div>
                       <FiTrendingUp className="h-5 w-5 text-indigo-500 dark:text-indigo-300" />
                     </div>
-                    <dl className="mt-5 space-y-2 text-sm text-slate-600 dark:text-slate-300">
-                      <div className="flex items-center justify-between">
+                    <dl className="mt-5 space-y-4 text-sm text-slate-600 dark:text-slate-300">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <dt className="flex items-center gap-2 font-medium text-slate-500 dark:text-slate-400">
                           <FiArrowUpCircle className="h-4 w-4 text-emerald-500" /> You paid
                         </dt>
-                        <dd className="font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(paid, currency)}</dd>
+                        <dd className="text-base font-semibold text-slate-800 dark:text-slate-100 sm:text-lg">
+                          {formatCurrency(paid, currency)}
+                        </dd>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <dt className="flex items-center gap-2 font-medium text-slate-500 dark:text-slate-400">
                           <FiArrowDownCircle className="h-4 w-4 text-rose-500" /> You owe
                         </dt>
-                        <dd className="font-semibold text-slate-800 dark:text-slate-100">{formatCurrency(owed, currency)}</dd>
+                        <dd className="text-base font-semibold text-slate-800 dark:text-slate-100 sm:text-lg">
+                          {formatCurrency(owed, currency)}
+                        </dd>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <dt className="font-medium text-slate-500 dark:text-slate-400">Net balance</dt>
                         <dd
                           className={
@@ -287,13 +291,13 @@ const DashboardPage = () => {
                               : 'font-semibold text-slate-500 dark:text-slate-400'
                           }
                         >
-                          {formatCurrency(net, currency)}
+                          <span className="text-base sm:text-lg">{formatCurrency(net, currency)}</span>
                         </dd>
                       </div>
                     </dl>
                     <p
                       className={
-                        'mt-4 text-sm ' +
+                        'mt-4 text-sm sm:text-base ' +
                         (netStatus.tone === 'positive'
                           ? 'text-emerald-600 dark:text-emerald-400'
                           : netStatus.tone === 'negative'
@@ -317,7 +321,7 @@ const DashboardPage = () => {
           )}
 
           {topBalances.length ? (
-            <div className="rounded-2xl border border-indigo-200 bg-indigo-50/80 px-6 py-5 shadow-sm dark:border-indigo-500/40 dark:bg-indigo-900/30">
+            <div className="rounded-2xl border border-indigo-200 bg-indigo-50/80 px-5 py-5 shadow-sm sm:px-6 dark:border-indigo-500/40 dark:bg-indigo-900/30">
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-indigo-500 dark:text-indigo-300">Attention</p>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
                 {topBalances.slice(0, 4).map(({ summary, user: userBalance }) => {
@@ -383,7 +387,7 @@ const DashboardPage = () => {
                 return (
                   <article
                     key={summary.group.id}
-                    className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg dark:border-slate-800 dark:bg-slate-900"
+                    className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-indigo-200 hover:shadow-lg sm:p-6 dark:border-slate-800 dark:bg-slate-900"
                   >
                     <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                       <div>
@@ -402,23 +406,32 @@ const DashboardPage = () => {
                       </div>
                     </header>
 
-                    <dl className="mt-5 grid gap-4 sm:grid-cols-3">
+                    <dl className="mt-5 grid gap-5 sm:grid-cols-3">
                       <div>
                         <dt className="text-xs uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">Total spent</dt>
-                        <dd className="mt-1 text-lg font-semibold text-slate-900 dark:text-slate-100">
+                        <dd className="mt-2 text-xl font-semibold text-slate-900 dark:text-slate-100">
                           {formatCurrency(summary.totalSpent, summary.currency)}
                         </dd>
                       </div>
                       {renderYourPosition()}
-                      <div className="flex flex-col gap-1">
+                      <div className="flex flex-col gap-2">
                         <dt className="text-xs uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">Quick actions</dt>
-                        <Link
-                          to="/expenses"
-                          state={{ groupId: summary.group.id }}
-                          className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200"
-                        >
-                          View expenses <FiExternalLink className="h-4 w-4" />
-                        </Link>
+                        <div className="flex flex-col gap-2 sm:items-start">
+                          <Link
+                            to="/expenses"
+                            state={{ groupId: summary.group.id }}
+                            className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200"
+                          >
+                            View expenses <FiExternalLink className="h-4 w-4" />
+                          </Link>
+                          <Link
+                            to="/groups"
+                            state={{ groupId: summary.group.id }}
+                            className="inline-flex items-center gap-2 text-sm font-semibold text-indigo-600 transition hover:text-indigo-500 dark:text-indigo-300 dark:hover:text-indigo-200"
+                          >
+                            Manage group <FiExternalLink className="h-4 w-4" />
+                          </Link>
+                        </div>
                       </div>
                     </dl>
 
