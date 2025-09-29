@@ -29,7 +29,7 @@ A modern expense sharing app that pairs a React + TypeScript frontend with a Sup
 - Add automated tests (component/unit) and Supabase seed scripts for sample data
 - Polish documentation (environment, deployment, troubleshooting) and wire up CI/CD for builds + migrations
 
-## � Project Structure
+## 🗂️ Project Structure
 
 ```
 splitwisely/
@@ -120,12 +120,22 @@ npm run preview   # Optional: serve the build locally
 
 ## 🚀 Deploying to GitHub Pages
 
-1. Set `base: '/splitwisely/'` (or your repo name) in `vite.config.ts` for correct asset URLs.
-2. Ensure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are provided during the build (GitHub Actions secrets or local `.env`).
-3. After `npm run build`, copy `dist/index.html` to `dist/404.html` to support SPA routing on Pages.
-4. Publish the `dist/` folder using `actions/deploy-pages`, `peaceiris/actions-gh-pages`, or by pushing to a `gh-pages` branch.
+The repository includes `.github/workflows/deploy.yml`, which builds and deploys the site to GitHub Pages whenever `main` changes (or when triggered manually).
 
-Supabase remains the source of truth for data and authentication; GitHub Pages simply hosts the static assets.
+1. Enable GitHub Pages with the **GitHub Actions** source under *Settings → Pages*.
+2. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository secrets so the build step can reach Supabase.
+3. (Optional) Provide a `VITE_PUBLIC_PATH` secret if you need a sub-path (for example `/splitwisely/`). The workflow defaults to `/`, which is correct for a custom domain.
+4. The workflow copies the root `CNAME` into the published artifact and duplicates `index.html` as `404.html`, ensuring your domain mapping and SPA routes continue working after deploy.
+
+To reproduce the deployment locally:
+
+```bash
+VITE_PUBLIC_PATH=/ npm run build
+cp CNAME dist/CNAME
+cp dist/index.html dist/404.html
+```
+
+Then push the contents of `dist/` to your hosting provider or GitHub Pages manually.
 
 ## 🤝 Contributing
 
@@ -135,7 +145,7 @@ Supabase remains the source of truth for data and authentication; GitHub Pages s
 4. Add or update documentation/tests where relevant
 5. Submit a pull request describing your changes and testing steps
 
-## � License
+## 📄 License
 
 MIT License — see [`LICENSE`](LICENSE) for details.
 
