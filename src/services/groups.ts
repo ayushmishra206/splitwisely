@@ -2,16 +2,23 @@ import { supabase } from '../lib/supabaseClient';
 import type { Tables, TablesInsert, TablesUpdate } from '../lib/database.types';
 
 export type GroupRecord = Tables<'groups'>;
+export type ProfileSummary = Pick<Tables<'profiles'>, 'id' | 'full_name' | 'avatar_url'>;
 export type GroupMemberRecord = Tables<'group_members'> & {
-  profiles?: Pick<Tables<'profiles'>, 'id' | 'full_name' | 'avatar_url'>;
+  profiles?: ProfileSummary | null;
 };
 
 export interface GroupWithMembers extends GroupRecord {
+  owner_profile?: ProfileSummary | null;
   group_members: GroupMemberRecord[];
 }
 
 const groupSelect = `
   *,
+  owner_profile:profiles!groups_owner_id_fkey (
+    id,
+    full_name,
+    avatar_url
+  ),
   group_members (
     group_id,
     member_id,
@@ -24,6 +31,67 @@ const groupSelect = `
     )
   )
 `;
+
+const profileSelect = 'id, full_name, avatar_url';
+
+function collectMissingProfileIds(group: GroupWithMembers): string[] {
+  const missing = new Set<string>();
+
+  if (!group.owner_profile) {
+    missing.add(group.owner_id);
+  }
+
+  (group.group_members ?? []).forEach((member) => {
+    if (!member.profiles) {
+      missing.add(member.member_id);
+    }
+  });
+
+  return Array.from(missing);
+}
+
+async function fetchProfilesByIds(ids: string[]): Promise<Map<string, ProfileSummary>> {
+  if (!ids.length) {
+    return new Map();
+  }
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(profileSelect)
+    .in('id', ids);
+
+  if (error) {
+    console.warn('Unable to fetch profile details', error);
+    return new Map();
+  }
+
+  return new Map((data ?? []).map((profile) => [profile.id, profile] as const));
+}
+
+function normalizeGroupMembers(group: GroupWithMembers, profileLookup: Map<string, ProfileSummary>): GroupWithMembers {
+  const members = [...(group.group_members ?? [])];
+
+  const hasOwnerMembership = members.some((member) => member.member_id === group.owner_id);
+  const ownerProfile = group.owner_profile ?? profileLookup.get(group.owner_id) ?? null;
+
+  if (!hasOwnerMembership) {
+    members.push({
+      group_id: group.id,
+      member_id: group.owner_id,
+      role: 'owner',
+      joined_at: group.created_at,
+      profiles: ownerProfile
+    });
+  }
+
+  return {
+    ...group,
+    group_members: members.map((member) => ({
+      ...member,
+      profiles: member.profiles ?? (member.member_id === ownerProfile?.id ? ownerProfile : profileLookup.get(member.member_id) ?? member.profiles ?? null)
+    }))
+  };
+}
 
 async function getCurrentUserId() {
   const {
@@ -52,13 +120,51 @@ export async function fetchGroups(): Promise<GroupWithMembers[]> {
     throw error;
   }
 
-  return (data ?? []) as GroupWithMembers[];
+  const groups = (data ?? []) as GroupWithMembers[];
+
+  const missingProfileIds = new Set<string>();
+  const ownerMembershipRows: TablesInsert<'group_members'>[] = [];
+
+  groups.forEach((group) => {
+    const members = group.group_members ?? [];
+    const hasOwnerMembership = members.some((member) => member.member_id === group.owner_id);
+
+    if (!hasOwnerMembership) {
+      ownerMembershipRows.push({
+        group_id: group.id,
+        member_id: group.owner_id,
+        role: 'owner' as const,
+        joined_at: group.created_at
+      });
+    }
+
+    collectMissingProfileIds(group).forEach((id) => missingProfileIds.add(id));
+  });
+
+  if (ownerMembershipRows.length) {
+    const { error: ownerInsertError } = await supabase
+      .from('group_members')
+      .upsert(ownerMembershipRows, { onConflict: 'group_id,member_id' });
+
+    if (ownerInsertError) {
+      console.warn('Unable to backfill owner membership rows', ownerInsertError);
+    }
+  }
+
+  const profileLookup = await fetchProfilesByIds(Array.from(missingProfileIds));
+
+  return groups.map((group) => normalizeGroupMembers(group, profileLookup));
 }
 
-export type CreateGroupInput = Pick<TablesInsert<'groups'>, 'name' | 'description' | 'currency'>;
+export type CreateGroupInput = Pick<TablesInsert<'groups'>, 'name' | 'description' | 'currency'> & {
+  memberIds?: string[];
+};
 
 export async function createGroup(input: CreateGroupInput): Promise<GroupWithMembers> {
   const userId = await getCurrentUserId();
+  const uniqueMemberIds = Array.from(
+    new Set((input.memberIds ?? []).filter((memberId) => memberId && memberId !== userId))
+  );
   const payload: TablesInsert<'groups'> = {
     name: input.name,
     description: input.description ?? null,
@@ -76,32 +182,49 @@ export async function createGroup(input: CreateGroupInput): Promise<GroupWithMem
     throw error;
   }
 
-  const insertedGroup = data as GroupWithMembers;
+  const insertedGroupRaw = data as GroupWithMembers;
 
-  const { error: membersError } = await supabase.from('group_members').insert({
-    group_id: insertedGroup.id,
-    member_id: userId,
-    role: 'owner'
-  });
+  const memberRows: TablesInsert<'group_members'>[] = [
+    {
+      group_id: insertedGroupRaw.id,
+      member_id: userId,
+      role: 'owner' as const
+    },
+    ...uniqueMemberIds.map((memberId) => ({
+      group_id: insertedGroupRaw.id,
+      member_id: memberId,
+      role: 'member' as const
+    }))
+  ];
 
-  if (membersError && membersError.code !== '23505') {
-    // Ignore duplicate entry errors (23505) but surface others
-    throw membersError;
-  }
+  if (memberRows.length) {
+    const { error: membersError } = await supabase
+      .from('group_members')
+      .upsert(memberRows, { onConflict: 'group_id,member_id' });
 
-  if (!membersError) {
-    const { data: hydrated, error: hydrateError } = await supabase
-      .from('groups')
-      .select(groupSelect)
-      .eq('id', insertedGroup.id)
-      .single();
-
-    if (!hydrateError && hydrated) {
-      return hydrated as GroupWithMembers;
+    if (membersError) {
+      throw membersError;
     }
   }
 
-  return insertedGroup;
+  const { data: hydrated, error: hydrateError } = await supabase
+    .from('groups')
+    .select(groupSelect)
+    .eq('id', insertedGroupRaw.id)
+    .single();
+
+  if (!hydrateError && hydrated) {
+    const hydratedGroup = hydrated as GroupWithMembers;
+    const lookup = await fetchProfilesByIds(
+      Array.from(new Set([...collectMissingProfileIds(hydratedGroup), ...uniqueMemberIds]))
+    );
+    return normalizeGroupMembers(hydratedGroup, lookup);
+  }
+
+  const insertedLookup = await fetchProfilesByIds(
+    Array.from(new Set([...collectMissingProfileIds(insertedGroupRaw), ...uniqueMemberIds]))
+  );
+  return normalizeGroupMembers(insertedGroupRaw, insertedLookup);
 }
 
 export type UpdateGroupInput = Pick<TablesUpdate<'groups'>, 'id' | 'name' | 'description' | 'currency'> & {
@@ -138,4 +261,65 @@ export async function deleteGroup(id: string): Promise<void> {
   if (error) {
     throw error;
   }
+}
+
+export async function addGroupMember(groupId: string, memberId: string, role: GroupMemberRecord['role'] = 'member'): Promise<GroupMemberRecord> {
+  const payload: TablesInsert<'group_members'> = {
+    group_id: groupId,
+    member_id: memberId,
+    role
+  };
+
+  const { error } = await supabase.from('group_members').insert(payload);
+
+  if (error) {
+    if (error.code === '23505') {
+      throw new Error('This person is already part of the group.');
+    }
+    throw error;
+  }
+
+  const profileLookup = await fetchProfilesByIds([memberId]);
+  return {
+    group_id: groupId,
+    member_id: memberId,
+    role,
+    joined_at: new Date().toISOString(),
+    profiles: profileLookup.get(memberId) ?? null
+  };
+}
+
+export async function removeGroupMember(groupId: string, memberId: string): Promise<void> {
+  const { error } = await supabase
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('member_id', memberId);
+
+  if (error) {
+    throw error;
+  }
+}
+
+export async function searchProfiles(term: string, limit = 10): Promise<ProfileSummary[]> {
+  const query = supabase
+    .from('profiles')
+    .select(profileSelect)
+    .order('full_name', { ascending: true })
+    .limit(limit);
+
+  const trimmed = term.trim();
+  let builder = query;
+
+  if (trimmed) {
+    builder = builder.ilike('full_name', `%${trimmed}%`);
+  }
+
+  const { data, error } = await builder;
+
+  if (error) {
+    throw error;
+  }
+
+  return (data ?? []) as ProfileSummary[];
 }

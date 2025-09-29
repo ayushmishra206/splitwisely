@@ -1,9 +1,9 @@
-import { useEffect } from 'react';
+import { type ReactNode, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 
-const groupSchema = z.object({
+export const groupSchema = z.object({
   name: z.string().min(1, 'Name is required').max(80, 'Keep the name under 80 characters'),
   description: z
     .string()
@@ -24,6 +24,7 @@ interface GroupFormProps {
   onCancel?: () => void;
   submitLabel?: string;
   isSubmitting?: boolean;
+  additionalContent?: ReactNode;
 }
 
 const currencyOptions = ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD'];
@@ -33,7 +34,8 @@ export const GroupForm = ({
   onSubmit,
   onCancel,
   submitLabel = 'Save group',
-  isSubmitting = false
+  isSubmitting = false,
+  additionalContent
 }: GroupFormProps) => {
   const {
     register,
@@ -109,7 +111,9 @@ export const GroupForm = ({
         {errors.currency && <p className="text-sm text-rose-500">{errors.currency.message}</p>}
       </div>
 
-      <div className="flex items-center justify-end gap-3 pt-2">
+  {additionalContent}
+
+  <div className="flex items-center justify-end gap-3 pt-2">
         {onCancel ? (
           <button
             type="button"

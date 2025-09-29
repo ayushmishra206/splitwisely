@@ -1,267 +1,144 @@
-# SplitWisely - Expense Sharing Web App
+# SplitWisely
 
-A modern, responsive web application for splitting expenses with friends, family, and roommates. Built with vanilla JavaScript, this PWA (Progressive Web App) runs entirely in the browser with offline support and localStorage persistence.
+A modern expense sharing app that pairs a React + TypeScript frontend with a Supabase backend for authentication, data storage, and real-time policies. SplitWisely helps roommates, friends, and travel groups track shared expenses, keep balances transparent, and settle up quickly.
 
-## 🌟 Features
+## ✅ Current Progress
 
-### Core Functionality
-- **Group Management**: Create and manage expense groups
-- **Smart Expense Tracking**: Add expenses with flexible split methods
-- **Balance Calculations**: Automatic calculation of who owes whom
-- **Settlement Optimization**: Minimize the number of transactions needed
-- **Data Persistence**: All data stored locally in browser
+- Migrated the legacy vanilla JS PWA to a **React 18 + Vite** codebase with TypeScript and Tailwind CSS
+- Provisioned a **Supabase Postgres schema** (profiles, groups, group_members, expenses, expense_splits, settlements) with row-level security
+- Implemented **Supabase email/password authentication** and session management via a custom provider
+- Delivered a full **Groups management experience** (create, edit, delete, membership hydration) backed by Supabase services and hooks
+- Built **Expense CRUD flows** with equal-split automation, modal forms, and group filtering
+- Hardened Supabase policies to remove recursive checks and introduced helper functions (`is_group_member`, `is_group_admin`) for safe authorization
+- Verified production builds (`npm run build`) and created migrations to keep remote databases in sync
 
-### User Experience
-- **Responsive Design**: Works perfectly on desktop, tablet, and mobile
-- **Dark Mode**: Toggle between light and dark themes
-- **PWA Support**: Install as an app on mobile devices
-- **Offline Capable**: Works without internet connection
-- **Export/Import**: Backup and restore data as JSON
+## 🛠️ Tech Stack
 
-### Split Methods
-- **Equal Split**: Divide expenses equally among members
-- **Custom Split**: Specify exact amounts for each person
-- **Flexible Members**: Add/remove people from specific expenses
+- **React 18 + TypeScript** with Vite bundling
+- **Tailwind CSS** for design system and theming
+- **Supabase** (Postgres, Auth, Row-Level Security)
+- **React Router** for SPA navigation
+- **React Hook Form + Zod** for robust form handling and validation
+- **ESLint + TypeScript** for static checks
 
-## 📁 Project Structure
+## 🚧 Next Steps
+
+- Apply the latest Supabase migrations to all environments to ensure the new RLS helpers are live
+- Expand the expense module with custom split modes, receipt uploads, and richer summaries
+- Implement the settlements workflow (record, edit, automate suggested payouts)
+- Add automated tests (component/unit) and Supabase seed scripts for sample data
+- Polish documentation (environment, deployment, troubleshooting) and wire up CI/CD for builds + migrations
+
+## � Project Structure
 
 ```
 splitwisely/
-├── index.html          # Main application HTML
-├── styles.css          # Complete CSS with dark mode
-├── script.js           # Full JavaScript application
-├── manifest.json       # PWA manifest
-├── sw.js              # Service worker for offline support
-├── .github/
-│   └── workflows/
-│       └── deploy.yml  # GitHub Pages deployment
-└── README.md          # This documentation
+├── src/
+│   ├── components/        # UI building blocks (auth, groups, expenses)
+│   ├── hooks/             # Custom hooks (useGroups, useExpenses, etc.)
+│   ├── pages/             # Route pages (Dashboard, Groups, Expenses, Settlements, Settings)
+│   ├── providers/         # Supabase provider and context
+│   └── lib/               # Supabase client and generated types
+├── supabase/
+│   ├── schema.sql         # Canonical database definition
+│   └── migrations/        # Versioned SQL migrations
+├── public/                # Static assets (if any)
+├── package.json
+├── vite.config.ts
+└── README.md
 ```
 
-## 🚀 Quick Start
+## ⚙️ Getting Started
 
-### Option 1: GitHub Pages (Recommended)
-1. **Fork this repository** on GitHub
-2. **Enable GitHub Pages** in repository settings
-3. **Access your app** at `https://yourusername.github.io/splitwisely`
+### 1. Prerequisites
 
-### Option 2: Local Development
-1. **Clone the repository**:
+- Node.js 20+
+- Supabase CLI (`npm install -g supabase`) or access to the Supabase SQL editor
+
+### 2. Clone & Install
+
+```bash
+git clone https://github.com/ayushmishra206/splitwisely.git
+cd splitwisely
+npm install
+```
+
+### 3. Environment Variables
+
+Create `.env.local` (or `.env`) at the project root:
+
+```env
+VITE_SUPABASE_URL=https://<your-project>.supabase.co
+VITE_SUPABASE_ANON_KEY=<your-anon-key>
+```
+
+The anon key is safe to expose in the browser. **Never** commit service-role keys.
+
+### 4. Database Setup
+
+1. Link your Supabase project (`supabase link --project-ref <project-ref>`) if you’re using the CLI.
+2. Apply migrations:
+
    ```bash
-   git clone https://github.com/yourusername/splitwisely.git
-   cd splitwisely
+   npx supabase db push
    ```
 
-2. **Open in browser**: Double-click `index.html` or use a local server
+   This runs `supabase/schema.sql` and the migrations in chronological order, ensuring helper functions (`is_group_member`, `is_group_admin`) and policies are up to date.
 
-3. **Live Server (VS Code)**:
-   - Install "Live Server" extension
-   - Right-click `index.html` → "Open with Live Server"
-   - App opens at `http://localhost:5500`
+### 5. Development
 
-### Option 3: Deploy to Other Platforms
-- **Netlify**: Drag and drop the folder to Netlify
-- **Vercel**: Import the GitHub repository
-- **GitHub Codespaces**: Open directly in browser IDE
-
-## 🎯 How to Use
-
-### 1. Create Your First Group
-- Click "Create Group" on the dashboard
-- Add group name and description
-- Add members (friends, roommates, etc.)
-- Save the group
-
-### 2. Add Expenses
-- Click "Add Expense" button
-- Enter description and amount
-- Select who paid
-- Choose split method (equal or custom)
-- Save the expense
-
-### 3. View Balances
-- Go to "Balances" tab
-- See who owes whom
-- Click "Settle" to mark debts as paid
-- Optimized settlements minimize transactions
-
-### 4. Manage Data
-- **Export**: Backup data as JSON file
-- **Import**: Restore from backup
-- **Dark Mode**: Toggle in header
-- **Mobile**: Works perfectly on phones
-
-## 🏗️ Technical Architecture
-
-### Frontend Stack
-- **HTML5**: Semantic structure with accessibility features
-- **CSS3**: Modern layout with CSS Grid/Flexbox
-- **Vanilla JavaScript**: No frameworks - fast and lightweight
-- **localStorage**: Client-side data persistence
-- **Service Worker**: Offline functionality and caching
-
-### Key Features
-- **Mobile-First**: Responsive design optimized for mobile
-- **Dark Mode**: Automatic theme switching with persistence
-- **PWA**: Installable with offline support
-- **Performance**: Optimized for fast loading and smooth interactions
-- **Accessibility**: WCAG compliant with keyboard navigation
-
-## 💾 Data Management
-
-### Storage
-- All data stored in browser's localStorage
-- No external database required
-- Data persists across browser sessions
-- Export/import for backup and migration
-
-### Data Structure
-```javascript
-{
-  groups: [
-    {
-      id: "unique-id",
-      name: "Trip to Paris",
-      description: "Summer vacation",
-      members: ["Alice", "Bob", "Charlie"],
-      createdAt: "2025-01-01T00:00:00.000Z"
-    }
-  ],
-  expenses: [
-    {
-      id: "unique-id",
-      description: "Hotel booking",
-      amount: 300.00,
-      groupId: "group-id",
-      paidBy: "Alice",
-      splits: {
-        "Alice": 100.00,
-        "Bob": 100.00,
-        "Charlie": 100.00
-      },
-      date: "2025-01-01T00:00:00.000Z"
-    }
-  ]
-}
+```bash
+npm run dev
 ```
 
-## 🎨 Customization
+Visit the Vite dev server URL (default `http://localhost:5173`). Sign up with an email/password to create a Supabase profile and start building groups and expenses.
 
-### Theme Colors
-Edit CSS variables in `styles.css`:
-```css
-:root {
-    --primary-color: #3b82f6;      /* Blue */
-    --secondary-color: #10b981;    /* Green */
-    --danger-color: #ef4444;       /* Red */
-    --warning-color: #f59e0b;      /* Amber */
-}
+### 6. Production Build
+
+```bash
+npm run build
+npm run preview   # Optional: serve the build locally
 ```
 
-### Adding New Features
-1. **New Views**: Add to navigation and create view HTML
-2. **Data Fields**: Extend data models in JavaScript
-3. **Calculations**: Modify balance calculation functions
-4. **UI Components**: Create reusable components
+## 🧰 NPM Scripts
 
-## 🚀 Deployment
+| Command             | Description                                      |
+|---------------------|--------------------------------------------------|
+| `npm run dev`       | Start Vite dev server with hot module reload     |
+| `npm run build`     | Type-check then produce a production build       |
+| `npm run preview`   | Serve the production build locally               |
 
-### GitHub Pages (Automatic)
-1. **Push to main branch** - Deployment is automatic
-2. **GitHub Actions** will build and deploy
-3. **Access your app** at your GitHub Pages URL
+## 🗄️ Database & Security
 
-### Manual Deployment
-Works on any static hosting service:
-- **Netlify**: Drag folder or connect Git
-- **Vercel**: Import repository
-- **Firebase Hosting**: `firebase deploy`
-- **AWS S3**: Upload files to bucket
-- **Any Web Server**: Upload files to public directory
+- The canonical schema lives in `supabase/schema.sql` and is mirrored in generated migrations under `supabase/migrations/`.
+- Helper functions `is_group_member` and `is_group_admin` gate access to group-specific data without triggering recursive RLS.
+- Policies enforce:
+  - Authenticated read/write access scoped to group membership
+  - Only owners (admins) can manage membership
+  - Expense and settlement writes are restricted to group members
+- Run `npx supabase db push` whenever migrations change to keep remote environments in sync.
 
-### Environment Setup
-No build process required! Just upload these files:
-- `index.html`
-- `styles.css`
-- `script.js`
-- `manifest.json`
-- `sw.js`
+## 🚀 Deploying to GitHub Pages
 
-## 🌐 Browser Support
+1. Set `base: '/splitwisely/'` (or your repo name) in `vite.config.ts` for correct asset URLs.
+2. Ensure `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` are provided during the build (GitHub Actions secrets or local `.env`).
+3. After `npm run build`, copy `dist/index.html` to `dist/404.html` to support SPA routing on Pages.
+4. Publish the `dist/` folder using `actions/deploy-pages`, `peaceiris/actions-gh-pages`, or by pushing to a `gh-pages` branch.
 
-- **Chrome**: Full support with PWA features
-- **Firefox**: Full support
-- **Safari**: Full support (iOS 14+ for PWA)
-- **Edge**: Full support with PWA features
-- **Mobile**: Optimized for all mobile browsers
-
-## 📱 PWA Features
-
-- **Installable**: Add to home screen on mobile
-- **Offline Work**: Use without internet
-- **App-like**: Runs in standalone mode
-- **Fast Loading**: Cached resources for speed
-
-## 🔒 Privacy & Security
-
-- **No Data Collection**: All data stays on your device
-- **No Tracking**: No analytics or user tracking
-- **Secure**: HTTPS required for PWA features
-- **Local Storage**: Data never leaves your browser
+Supabase remains the source of truth for data and authentication; GitHub Pages simply hosts the static assets.
 
 ## 🤝 Contributing
 
-We welcome contributions! Here's how:
+1. Fork the repository and create a feature branch
+2. Run the Supabase migrations locally before making changes
+3. Follow the existing TypeScript, Tailwind, and ESLint conventions
+4. Add or update documentation/tests where relevant
+5. Submit a pull request describing your changes and testing steps
 
-1. **Fork** the repository
-2. **Create** a feature branch: `git checkout -b feature-name`
-3. **Make** your changes
-4. **Test** thoroughly on mobile and desktop
-5. **Submit** a pull request
+## � License
 
-### Development Guidelines
-- Keep code vanilla JavaScript (no frameworks)
-- Maintain mobile-first responsive design
-- Test in multiple browsers
-- Follow existing code style
-- Update documentation
-
-## 📄 License
-
-This project is open source under the [MIT License](LICENSE).
-
-## 🔄 Roadmap
-
-### Phase 1 ✅
-- [x] Core expense splitting functionality
-- [x] Group management
-- [x] Balance calculations
-- [x] Dark mode support
-- [x] PWA features
-- [x] Export/import data
-
-### Phase 2 🚧
-- [ ] Receipt photo uploads
-- [ ] Expense categories
-- [ ] Payment integrations
-- [ ] Multi-currency support
-- [ ] Email notifications
-- [ ] Advanced reporting
-
-### Phase 3 📋
-- [ ] Real-time sync (WebRTC/Firebase)
-- [ ] User accounts and authentication
-- [ ] Mobile apps (React Native)
-- [ ] API for third-party integrations
-
-## 📞 Support
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/splitwisely/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/yourusername/splitwisely/discussions)
-- **Email**: Create an issue for support
+MIT License — see [`LICENSE`](LICENSE) for details.
 
 ---
 
-**Built with ❤️ using vanilla web technologies**
-
-> A lightweight, fast, and privacy-focused alternative to expensive expense-sharing apps.
+Built with ❤️ using React, TypeScript, and Supabase.

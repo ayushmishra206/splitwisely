@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import {
   FiBarChart2,
@@ -29,10 +29,45 @@ const navItems = [
   { label: 'Settings', path: '/settings', icon: FiSettings }
 ];
 
-const getPreferredTheme = () => {
+const THEME_STORAGE_KEY = 'splitwisely:theme';
+
+const readStoredTheme = (): boolean | null => {
+  if (typeof window === 'undefined') {
+    return null;
+  }
+
+  try {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === 'dark') {
+      return true;
+    }
+    if (stored === 'light') {
+      return false;
+    }
+  } catch (error) {
+    console.warn('Unable to read the theme preference', error);
+  }
+
+  return null;
+};
+
+const persistTheme = (isDark: boolean) => {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, isDark ? 'dark' : 'light');
+  } catch (error) {
+    console.warn('Unable to persist the theme preference', error);
+  }
+};
+
+const prefersDarkMode = (): boolean => {
   if (typeof window === 'undefined') {
     return false;
   }
+
   return window.matchMedia('(prefers-color-scheme: dark)').matches;
 };
 
@@ -40,7 +75,9 @@ const App = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, isLoading, supabase } = useSupabase();
-  const [isDark, setIsDark] = useState<boolean>(() => getPreferredTheme());
+  const storedPreference = useRef(readStoredTheme());
+  const [isDark, setIsDark] = useState<boolean>(() => storedPreference.current ?? prefersDarkMode());
+  const [hasExplicitPreference, setHasExplicitPreference] = useState<boolean>(() => storedPreference.current !== null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   useEffect(() => {
@@ -48,25 +85,40 @@ const App = () => {
       return;
     }
     document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.dataset.theme = isDark ? 'dark' : 'light';
+    document.documentElement.style.colorScheme = isDark ? 'dark' : 'light';
   }, [isDark]);
 
   useEffect(() => {
     if (typeof window === 'undefined') {
       return;
     }
+
+    if (hasExplicitPreference) {
+      return;
+    }
+
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
     const listener = (event: MediaQueryListEvent) => {
       setIsDark(event.matches);
     };
+
     if (mediaQuery.addEventListener) {
       mediaQuery.addEventListener('change', listener);
       return () => mediaQuery.removeEventListener('change', listener);
     }
+
     mediaQuery.addListener(listener);
     return () => mediaQuery.removeListener(listener);
-  }, []);
+  }, [hasExplicitPreference]);
 
-  const toggleTheme = () => setIsDark((value) => !value);
+  const toggleTheme = () =>
+    setIsDark((value) => {
+      const next = !value;
+      setHasExplicitPreference(true);
+      persistTheme(next);
+      return next;
+    });
   const toggleSidebar = () => setIsSidebarOpen((value) => !value);
   const closeSidebar = () => setIsSidebarOpen(false);
   const openQuickAddExpense = () => {

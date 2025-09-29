@@ -14,7 +14,7 @@ import {
 import { ExpenseForm, type ExpenseFormValues } from '../components/expenses/ExpenseForm';
 import { useGroups } from '../hooks/useGroups';
 import { useExpenses } from '../hooks/useExpenses';
-import type { ExpenseWithRelations } from '../services/expenses';
+import { computeEqualSplit, type ExpenseWithRelations, type SplitShareInput } from '../services/expenses';
 
 interface LocationState {
   openCreate?: boolean;
@@ -69,6 +69,30 @@ const Modal = ({ title, isOpen, onClose, children }: ModalProps) => {
       </div>
     </div>
   );
+};
+
+const deriveSplits = (values: ExpenseFormValues): SplitShareInput[] => {
+  const amount = Number.parseFloat((values.amount ?? '0').trim());
+  if (!values.participantIds.length || Number.isNaN(amount) || amount <= 0) {
+    return [];
+  }
+
+  if (values.splitMode === 'equal') {
+    const evenShares = computeEqualSplit(amount, values.participantIds);
+    return values.participantIds.map((memberId, index) => ({
+      memberId,
+      share: evenShares[index] ?? 0
+    }));
+  }
+
+  return values.participantIds.map((memberId) => {
+    const raw = (values.customSplits?.[memberId] ?? '0').trim();
+    const parsed = Number.parseFloat(raw);
+    return {
+      memberId,
+      share: Number.isNaN(parsed) ? 0 : parsed
+    };
+  });
 };
 
 const formatAmount = (amount: string, currency = 'USD') => {
@@ -156,12 +180,16 @@ const ExpensesPage = () => {
     async (values: ExpenseFormValues) => {
       setIsSubmitting(true);
       try {
+        const splits = deriveSplits(values);
+        if (!splits.length) {
+          throw new Error('Unable to calculate participant splits. Check the amount and selected members.');
+        }
         await createExpense({
           groupId: values.groupId,
           description: values.description.trim(),
           amount: Number.parseFloat(values.amount),
           payerId: values.payerId,
-          participantIds: values.participantIds,
+          splits,
           expenseDate: values.expenseDate,
           notes: values.notes?.trim() ? values.notes.trim() : null
         });
@@ -185,13 +213,17 @@ const ExpensesPage = () => {
       }
       setIsSubmitting(true);
       try {
+        const splits = deriveSplits(values);
+        if (!splits.length) {
+          throw new Error('Unable to calculate participant splits. Check the amount and selected members.');
+        }
         await updateExpense({
           id: editingExpense.id,
           groupId: values.groupId,
           description: values.description.trim(),
           amount: Number.parseFloat(values.amount),
           payerId: values.payerId,
-          participantIds: values.participantIds,
+          splits,
           expenseDate: values.expenseDate,
           notes: values.notes?.trim() ? values.notes.trim() : null
         });
@@ -241,7 +273,11 @@ const ExpensesPage = () => {
         const currency = expense.group?.currency ?? 'USD';
         const payerName = expense.payer?.full_name ?? 'Someone';
         const participantNames = participants
-          .map((split) => split.profiles?.full_name ?? 'Member')
+          .map((split) => {
+            const name = split.profiles?.full_name ?? 'Member';
+            const shareValue = typeof split.share === 'string' ? split.share : String(split.share ?? 0);
+            return `${name} (${formatAmount(shareValue, currency)})`;
+          })
           .filter(Boolean)
           .join(', ');
 
@@ -326,12 +362,30 @@ const ExpensesPage = () => {
     if (!editingExpense) {
       return undefined;
     }
+    const splits = editingExpense.expense_splits ?? [];
+    const participantIds = splits.map((split) => split.member_id);
+    const amountNumeric = Number.parseFloat(editingExpense.amount ?? '0');
+    const splitRecord = splits.reduce<Record<string, string>>((acc, split) => {
+      acc[split.member_id] = typeof split.share === 'string' ? split.share : String(split.share ?? '0');
+      return acc;
+    }, {});
+
+    const equalShares = participantIds.length ? computeEqualSplit(amountNumeric, participantIds) : [];
+    const isEqualSplit =
+      participantIds.length === equalShares.length &&
+      participantIds.every((memberId, index) => {
+        const shareValue = Number.parseFloat(splitRecord[memberId] ?? '0');
+        return Math.abs(shareValue - (equalShares[index] ?? 0)) < 0.01;
+      });
+
     return {
       groupId: editingExpense.group_id,
       description: editingExpense.description,
       amount: editingExpense.amount,
       payerId: editingExpense.payer_id ?? undefined,
-      participantIds: editingExpense.expense_splits?.map((split) => split.member_id) ?? [],
+      participantIds,
+      splitMode: isEqualSplit ? 'equal' : 'custom',
+      customSplits: splitRecord,
       expenseDate: editingExpense.expense_date?.slice(0, 10),
       notes: editingExpense.notes ?? ''
     };

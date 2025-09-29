@@ -1,8 +1,21 @@
 import { useEffect, useMemo, useRef } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type FieldError } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import type { GroupWithMembers } from '../../services/groups';
+import { computeEqualSplit } from '../../services/expenses';
+
+type GroupMember = NonNullable<GroupWithMembers['group_members']>[number];
+
+const customSplitValueSchema = z
+  .string()
+  .refine((value) => {
+    if (value === '') {
+      return true;
+    }
+    const parsed = Number.parseFloat(value);
+    return !Number.isNaN(parsed) && parsed >= 0;
+  }, 'Enter a valid amount');
 
 const expenseSchema = z.object({
   groupId: z.string().min(1, 'Select the group this expense belongs to'),
@@ -19,12 +32,57 @@ const expenseSchema = z.object({
     }, 'Use a positive amount'),
   payerId: z.string().min(1, 'Pick who paid'),
   participantIds: z.array(z.string()).min(1, 'Select at least one participant'),
+  splitMode: z.enum(['equal', 'custom']).default('equal'),
+  customSplits: z.record(customSplitValueSchema).optional(),
   expenseDate: z.string().min(1, 'Choose when this expense happened'),
   notes: z
     .string()
     .max(240, 'Keep notes under 240 characters')
     .optional()
     .or(z.literal(''))
+}).superRefine((data, ctx) => {
+  if (data.splitMode !== 'custom') {
+    return;
+  }
+
+  const amount = Number.parseFloat(data.amount);
+  if (Number.isNaN(amount) || amount <= 0) {
+    return;
+  }
+
+  let total = 0;
+  data.participantIds.forEach((participantId) => {
+    const raw = data.customSplits?.[participantId];
+
+    if (typeof raw === 'undefined' || raw === '') {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['customSplits', participantId],
+        message: 'Enter an amount for each participant'
+      });
+      return;
+    }
+
+    const parsed = Number.parseFloat(raw);
+    if (Number.isNaN(parsed) || parsed < 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['customSplits', participantId],
+        message: 'Amounts must be zero or greater'
+      });
+      return;
+    }
+
+    total += parsed;
+  });
+
+  if (data.participantIds.length && Math.abs(total - amount) > 0.01) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['customSplits'],
+      message: 'Custom splits need to add up to the expense total'
+    });
+  }
 });
 
 export type ExpenseFormValues = z.infer<typeof expenseSchema>;
@@ -76,6 +134,8 @@ export const ExpenseForm = ({
       amount: '',
       payerId: groupOptions[0]?.members?.[0]?.member_id ?? '',
       participantIds: groupOptions[0]?.members?.map((member) => member.member_id) ?? [],
+      splitMode: 'equal',
+      customSplits: {},
       expenseDate: new Date().toISOString().slice(0, 10),
       notes: '',
       ...defaultValues
@@ -86,6 +146,54 @@ export const ExpenseForm = ({
   const selectedGroup = useMemo(() => groupOptions.find((group) => group.id === selectedGroupId) ?? null, [groupOptions, selectedGroupId]);
   const participantIds = watch('participantIds');
   const payerId = watch('payerId');
+  const splitMode = watch('splitMode');
+  const customSplits = watch('customSplits');
+  const amountValue = watch('amount');
+
+  const amountNumber = useMemo(() => {
+    const parsed = Number.parseFloat(amountValue || '0');
+    return Number.isFinite(parsed) ? parsed : 0;
+  }, [amountValue]);
+
+  const participantLookup = useMemo(() => {
+    const map = new Map<string, GroupMember>();
+    selectedGroup?.members?.forEach((member) => {
+      map.set(member.member_id, member);
+    });
+    return map;
+  }, [selectedGroup]);
+
+  const orderedParticipants = useMemo(
+    () =>
+      participantIds
+        .map((id) => participantLookup.get(id))
+        .filter((member): member is GroupMember => Boolean(member)),
+    [participantIds, participantLookup]
+  );
+
+  const equalShares = useMemo(() => {
+    if (!participantIds.length || amountNumber <= 0) {
+      return [];
+    }
+    return computeEqualSplit(amountNumber, participantIds);
+  }, [amountNumber, participantIds]);
+
+  const customSplitsTotal = useMemo(() => {
+    if (!participantIds.length || !customSplits) {
+      return 0;
+    }
+    return participantIds.reduce((sum, memberId) => {
+      const raw = customSplits[memberId];
+      const parsed = Number.parseFloat(raw ?? '0');
+      return sum + (Number.isNaN(parsed) ? 0 : parsed);
+    }, 0);
+  }, [customSplits, participantIds]);
+
+  const customSplitFieldErrors = (errors.customSplits as Record<string, FieldError> | undefined) ?? {};
+  const customSplitsMessage =
+    errors.customSplits && 'message' in errors.customSplits
+      ? (errors.customSplits as { message?: string }).message
+      : undefined;
 
   useEffect(() => {
     if (!groupOptions.length) {
@@ -113,6 +221,8 @@ export const ExpenseForm = ({
       amount: defaultValues?.amount ?? '',
       payerId: defaultValues?.payerId ?? fallbackMembers[0]?.member_id ?? '',
       participantIds: defaultValues?.participantIds ?? fallbackMembers.map((member) => member.member_id),
+      splitMode: defaultValues?.splitMode ?? 'equal',
+      customSplits: defaultValues?.customSplits ?? {},
       expenseDate: defaultValues?.expenseDate ?? new Date().toISOString().slice(0, 10),
       notes: defaultValues?.notes ?? ''
     });
@@ -133,6 +243,7 @@ export const ExpenseForm = ({
     if (!selectedGroup) {
       setValue('participantIds', []);
       setValue('payerId', '');
+      setValue('customSplits', {});
       return;
     }
 
@@ -151,6 +262,21 @@ export const ExpenseForm = ({
       setValue('participantIds', filtered);
     }
   }, [selectedGroup, setValue, participantIds, payerId]);
+
+  useEffect(() => {
+    const current = customSplits ?? {};
+    const normalized = participantIds.reduce<Record<string, string>>((acc, id) => {
+      acc[id] = current[id] ?? '';
+      return acc;
+    }, {});
+
+    const currentKey = JSON.stringify(current);
+    const normalizedKey = JSON.stringify(normalized);
+
+    if (currentKey !== normalizedKey) {
+      setValue('customSplits', normalized, { shouldDirty: false, shouldValidate: splitMode === 'custom' });
+    }
+  }, [participantIds, customSplits, setValue, splitMode]);
 
   return (
     <form className="space-y-5" onSubmit={handleSubmit(onSubmit)}>
@@ -229,11 +355,15 @@ export const ExpenseForm = ({
             disabled={!selectedGroup || selectedGroup.members.length === 0}
           >
             <option value="">Select member</option>
-            {selectedGroup?.members.map((member) => (
-              <option key={member.member_id} value={member.member_id}>
-                {member.profiles?.full_name ?? 'Member'}
-              </option>
-            ))}
+            {selectedGroup?.members.map((member) => {
+              const baseLabel = member.profiles?.full_name ?? 'Member';
+              const label = member.role === 'owner' ? `${baseLabel} (Owner)` : baseLabel;
+              return (
+                <option key={member.member_id} value={member.member_id}>
+                  {label}
+                </option>
+              );
+            })}
           </select>
           {errors.payerId && <p className="text-sm text-rose-500">{errors.payerId.message}</p>}
         </div>
@@ -245,7 +375,8 @@ export const ExpenseForm = ({
           selectedGroup.members.length ? (
             <div className="grid gap-2 sm:grid-cols-2">
               {selectedGroup.members.map((member) => {
-                const label = member.profiles?.full_name ?? 'Member';
+                const baseLabel = member.profiles?.full_name ?? 'Member';
+                const label = member.role === 'owner' ? `${baseLabel} (Owner)` : baseLabel;
                 const value = member.member_id;
                 return (
                   <label
@@ -275,6 +406,102 @@ export const ExpenseForm = ({
         )}
         {errors.participantIds && <p className="text-sm text-rose-500">{errors.participantIds.message}</p>}
       </div>
+
+      <div className="space-y-2">
+        <p className="text-sm font-medium text-slate-700 dark:text-slate-200">Split method</p>
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+            <input
+              type="radio"
+              value="equal"
+              className="mt-1 h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              {...register('splitMode')}
+            />
+            <span>
+              <span className="block text-sm font-semibold">Split equally</span>
+              <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
+                Automatically divide the total between selected participants.
+              </span>
+            </span>
+          </label>
+          <label className="flex items-start gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700 shadow-sm transition hover:border-indigo-200 hover:bg-indigo-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+            <input
+              type="radio"
+              value="custom"
+              className="mt-1 h-4 w-4 border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              {...register('splitMode')}
+            />
+            <span>
+              <span className="block text-sm font-semibold">Custom amounts</span>
+              <span className="mt-0.5 block text-xs text-slate-500 dark:text-slate-400">
+                Assign exact amounts to each participant and match the total.
+              </span>
+            </span>
+          </label>
+        </div>
+        {splitMode === 'equal' && orderedParticipants.length ? (
+          <div className="space-y-2 rounded-xl border border-dashed border-slate-300 bg-slate-50 px-4 py-3 text-sm text-slate-600 dark:border-slate-700/70 dark:bg-slate-900/60 dark:text-slate-300">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400 dark:text-slate-500">Equal split preview</p>
+            <ul className="space-y-1">
+              {orderedParticipants.map((member, index) => (
+                <li key={member.member_id} className="flex items-center justify-between gap-4 text-sm">
+                  <span>{member.profiles?.full_name ?? 'Member'}</span>
+                  <span className="font-semibold">
+                    {equalShares[index]?.toFixed(2) ?? '0.00'} {selectedGroup?.currency ?? ''}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+      </div>
+
+      {splitMode === 'custom' ? (
+        <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+          <p className="text-sm text-slate-600 dark:text-slate-300">
+            Enter an amount for each participant so the sum equals the expense total.
+          </p>
+          <div className="space-y-3">
+            {orderedParticipants.map((member) => {
+              const memberId = member.member_id;
+              const value = customSplits?.[memberId] ?? '';
+              const fieldError = customSplitFieldErrors?.[memberId];
+
+              return (
+                <div key={memberId} className="space-y-1">
+                  <div className="flex items-center justify-between gap-4">
+                    <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
+                      {member.profiles?.full_name ?? 'Member'}
+                    </span>
+                    <input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={value}
+                      onChange={(event) => {
+                        const next = { ...(customSplits ?? {}) };
+                        next[memberId] = event.target.value;
+                        setValue('customSplits', next, {
+                          shouldDirty: true,
+                          shouldTouch: true,
+                          shouldValidate: true
+                        });
+                      }}
+                      className="w-40 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100"
+                      placeholder="0.00"
+                    />
+                  </div>
+                  {fieldError ? <p className="text-xs text-rose-500">{fieldError.message}</p> : null}
+                </div>
+              );
+            })}
+          </div>
+          <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-600 dark:border-slate-700 dark:bg-slate-900/60 dark:text-slate-300">
+            Total custom split: {customSplitsTotal.toFixed(2)} / {amountNumber.toFixed(2)} {selectedGroup?.currency ?? ''}
+          </div>
+          {customSplitsMessage ? <p className="text-sm text-rose-500">{customSplitsMessage}</p> : null}
+        </div>
+      ) : null}
 
       <div className="space-y-1">
         <label className="block text-sm font-medium text-slate-700 dark:text-slate-200" htmlFor="expense-notes">

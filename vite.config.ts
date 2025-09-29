@@ -3,9 +3,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
+  const base = env.VITE_PUBLIC_PATH || '/splitwisely/';
   return {
     plugins: [react()],
-    base: env.VITE_PUBLIC_PATH || '/splitwisely/',
+    base,
     server: {
       port: 5173,
       strictPort: true

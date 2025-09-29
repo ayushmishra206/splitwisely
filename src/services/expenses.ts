@@ -26,7 +26,7 @@ const expenseSelect = `
 
 const formatCurrency = (value: number) => value.toFixed(2);
 
-const computeEqualSplit = (amount: number, participantIds: string[]): string[] => {
+export const computeEqualSplit = (amount: number, participantIds: string[]): number[] => {
   const participantCount = Math.max(participantIds.length, 1);
   const totalCents = Math.round(amount * 100);
   const baseShare = Math.floor(totalCents / participantCount);
@@ -34,7 +34,7 @@ const computeEqualSplit = (amount: number, participantIds: string[]): string[] =
 
   return participantIds.map((_, index) => {
     const shareCents = baseShare + (index < remainder ? 1 : 0);
-    return (shareCents / 100).toFixed(2);
+    return shareCents / 100;
   });
 };
 
@@ -58,19 +58,28 @@ export const fetchExpenses = async (filters: ExpenseFilters = {}): Promise<Expen
   return (data ?? []) as ExpenseWithRelations[];
 };
 
+export interface SplitShareInput {
+  memberId: string;
+  share: number;
+}
+
 export interface CreateExpenseInput {
   groupId: string;
   description: string;
   amount: number;
   payerId: string;
-  participantIds: string[];
   expenseDate: string;
+  splits: SplitShareInput[];
   notes?: string | null;
 }
 
 export const createExpense = async (input: CreateExpenseInput): Promise<ExpenseWithRelations> => {
-  if (!input.participantIds.length) {
-    throw new Error('Select at least one participant');
+  if (!input.splits.length) {
+    throw new Error('Provide at least one split participant');
+  }
+  const totalSplit = input.splits.reduce((sum, split) => sum + split.share, 0);
+  if (Math.abs(totalSplit - input.amount) > 0.01) {
+    throw new Error('Split shares must add up to the total amount');
   }
   const payload: TablesInsert<'expenses'> = {
     group_id: input.groupId,
@@ -88,12 +97,10 @@ export const createExpense = async (input: CreateExpenseInput): Promise<ExpenseW
   }
 
   const inserted = data as ExpenseWithRelations;
-  const splits = computeEqualSplit(input.amount, input.participantIds);
-
-  const splitRows: TablesInsert<'expense_splits'>[] = input.participantIds.map((memberId, index) => ({
+  const splitRows: TablesInsert<'expense_splits'>[] = input.splits.map((split) => ({
     expense_id: inserted.id,
-    member_id: memberId,
-    share: splits[index]
+    member_id: split.memberId,
+    share: formatCurrency(split.share)
   }));
 
   const { error: splitsError } = await supabase.from('expense_splits').insert(splitRows);
@@ -121,12 +128,19 @@ export interface UpdateExpenseInput {
   description: string;
   amount: number;
   payerId: string;
-  participantIds: string[];
   expenseDate: string;
+  splits: SplitShareInput[];
   notes?: string | null;
 }
 
 export const updateExpense = async (input: UpdateExpenseInput): Promise<ExpenseWithRelations> => {
+  if (!input.splits.length) {
+    throw new Error('Provide at least one split participant');
+  }
+  const totalSplit = input.splits.reduce((sum, split) => sum + split.share, 0);
+  if (Math.abs(totalSplit - input.amount) > 0.01) {
+    throw new Error('Split shares must add up to the total amount');
+  }
   const payload: TablesUpdate<'expenses'> = {
     group_id: input.groupId,
     description: input.description,
@@ -153,11 +167,10 @@ export const updateExpense = async (input: UpdateExpenseInput): Promise<ExpenseW
     throw deleteError;
   }
 
-  const splits = computeEqualSplit(input.amount, input.participantIds);
-  const splitRows: TablesInsert<'expense_splits'>[] = input.participantIds.map((memberId, index) => ({
+  const splitRows: TablesInsert<'expense_splits'>[] = input.splits.map((split) => ({
     expense_id: input.id,
-    member_id: memberId,
-    share: splits[index]
+    member_id: split.memberId,
+    share: formatCurrency(split.share)
   }));
 
   const { error: splitsError } = await supabase.from('expense_splits').insert(splitRows);
