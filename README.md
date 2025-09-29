@@ -123,7 +123,7 @@ npm run preview   # Optional: serve the build locally
 The repository includes `.github/workflows/deploy.yml`, which builds and deploys the site to GitHub Pages whenever `main` changes (or when triggered manually).
 
 1. Enable GitHub Pages with the **GitHub Actions** source under *Settings → Pages*.
-2. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository secrets so the build step can reach Supabase.
+2. Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` as repository secrets so the build step can reach Supabase. The workflow reads them as `secrets.VITE_SUPABASE_URL` and `secrets.VITE_SUPABASE_ANON_KEY` when running `npm run build`.
 3. (Optional) Provide a `VITE_PUBLIC_PATH` secret if you need a sub-path (for example `/splitwisely/`). The workflow defaults to `/`, which is correct for a custom domain.
 4. The workflow copies the root `CNAME` into the published artifact and duplicates `index.html` as `404.html`, ensuring your domain mapping and SPA routes continue working after deploy.
 
