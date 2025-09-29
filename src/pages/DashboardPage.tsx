@@ -11,6 +11,7 @@ import {
 } from 'react-icons/fi';
 import { useGroups } from '../hooks/useGroups';
 import { useExpenses } from '../hooks/useExpenses';
+import { useSettlements } from '../hooks/useSettlements';
 import { useSupabase } from '../providers/SupabaseProvider';
 
 const parseCurrencyAmount = (input: unknown): number => {
@@ -60,7 +61,12 @@ const DashboardPage = () => {
   const userId = user?.id ?? null;
   const { groups, isLoading: groupsLoading, error: groupsError } = useGroups();
   const { expenses, isLoading: expensesLoading, error: expensesError } = useExpenses();
-  const isLoading = groupsLoading || expensesLoading;
+  const {
+    settlements,
+    isLoading: settlementsLoading,
+    error: settlementsError
+  } = useSettlements();
+  const isLoading = groupsLoading || expensesLoading || settlementsLoading;
 
   const { groupSummaries, currencySummaries, topBalances, totalGroups, totalExpenses } = useMemo(() => {
     const summaries = groups.map((group) => {
@@ -105,6 +111,21 @@ const DashboardPage = () => {
 
       members.forEach((member) => {
         ensureTracker(member.member_id);
+      });
+
+      const relevantSettlements = settlements.filter((settlement) => settlement.group_id === group.id);
+      relevantSettlements.forEach((settlement) => {
+        const amount = parseCurrencyAmount(settlement.amount);
+        const payerRecord = ensureTracker(settlement.from_member);
+        const receiverRecord = ensureTracker(settlement.to_member);
+        payerRecord.owed -= amount;
+        receiverRecord.paid -= amount;
+        if (settlement.from_profile && settlement.from_profile.id) {
+          profileById.set(settlement.from_profile.id, { full_name: settlement.from_profile.full_name ?? null });
+        }
+        if (settlement.to_profile && settlement.to_profile.id) {
+          profileById.set(settlement.to_profile.id, { full_name: settlement.to_profile.full_name ?? null });
+        }
       });
 
       const memberSummaries: MemberBalance[] = Array.from(tracker.entries()).map(([memberId, { paid, owed }]) => {
@@ -167,7 +188,7 @@ const DashboardPage = () => {
       totalGroups: groups.length,
       totalExpenses: expenses.length
     };
-  }, [groups, expenses, userId]);
+  }, [groups, expenses, settlements, userId]);
 
   const hasData = groupSummaries.length > 0 && totalExpenses > 0;
 
@@ -211,6 +232,16 @@ const DashboardPage = () => {
       {isLoading ? (
         <div className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-500 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
           <FiLoader className="h-4 w-4 animate-spin" /> Crunching the numbers…
+        </div>
+      ) : null}
+
+      {settlementsError ? (
+        <div className="flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm dark:border-rose-800/60 dark:bg-rose-900/40 dark:text-rose-200">
+          <FiAlertTriangle className="mt-0.5 h-4 w-4" />
+          <div>
+            <p className="font-medium">We couldn&apos;t load settlements.</p>
+            <p>{settlementsError.message}</p>
+          </div>
         </div>
       ) : null}
 

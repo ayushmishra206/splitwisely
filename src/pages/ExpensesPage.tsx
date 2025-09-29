@@ -51,7 +51,7 @@ const Modal = ({ title, isOpen, onClose, children }: ModalProps) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-6 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-6">
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
@@ -65,7 +65,7 @@ const Modal = ({ title, isOpen, onClose, children }: ModalProps) => {
             ×
           </button>
         </div>
-        <div className="mt-6">{children}</div>
+        <div className="mt-6 max-h-[65vh] overflow-y-auto pr-1 sm:max-h-none sm:pr-0">{children}</div>
       </div>
     </div>
   );

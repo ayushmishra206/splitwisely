@@ -161,7 +161,7 @@ const App = () => {
     <div className="flex min-h-screen bg-gradient-to-br from-slate-100 via-white to-slate-200 text-slate-900 transition-colors duration-300 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 dark:text-slate-50">
       <button
         type="button"
-        className="fixed left-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white shadow-md lg:hidden dark:border-slate-700 dark:bg-slate-900"
+        className="fixed left-4 top-5 z-30 flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white shadow-md lg:hidden dark:border-slate-700 dark:bg-slate-900"
         onClick={toggleSidebar}
         aria-label="Toggle navigation"
       >
@@ -224,8 +224,8 @@ const App = () => {
         </div>
       </aside>
       <main className="relative flex min-h-screen flex-1 flex-col lg:ml-0">
-        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/70 backdrop-blur dark:border-slate-800 dark:bg-slate-950/70">
-          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5">
+        <header className="sticky top-0 z-10 border-b border-slate-200 bg-white/80 backdrop-blur dark:border-slate-800 dark:bg-slate-950/80">
+          <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-4 sm:px-6 sm:py-5">
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.35em] text-slate-400 dark:text-slate-500">{new Date().toLocaleDateString()}</p>
               <h1 className="mt-1 text-2xl font-semibold text-slate-900 dark:text-slate-100">{activeTitle}</h1>
@@ -248,9 +248,21 @@ const App = () => {
                 </div>
               </div>
             </div>
+            <div className="flex items-center gap-3 lg:hidden">
+              <button
+                type="button"
+                onClick={openQuickAddExpense}
+                className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-indigo-500"
+              >
+                <FiPlus className="h-4 w-4" /> Add
+              </button>
+              <div className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-sm font-semibold text-slate-700 shadow-sm dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                {user.email?.slice(0, 1).toUpperCase() ?? 'U'}
+              </div>
+            </div>
           </div>
         </header>
-        <div className="mx-auto w-full max-w-6xl flex-1 px-6 py-10">
+        <div className="mx-auto w-full max-w-6xl flex-1 px-4 pb-28 pt-8 sm:px-6 sm:pb-12 sm:pt-10 lg:pb-12">
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/groups" element={<GroupsPage />} />
@@ -270,6 +282,36 @@ const App = () => {
             />
           </Routes>
         </div>
+        <button
+          type="button"
+          onClick={openQuickAddExpense}
+          className="fixed bottom-20 right-4 z-30 inline-flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl transition hover:bg-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/40 lg:hidden"
+          aria-label="Quick add expense"
+        >
+          <FiPlus className="h-6 w-6" />
+        </button>
+        <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-slate-200 bg-white/95 backdrop-blur dark:border-slate-800 dark:bg-slate-950/95 lg:hidden">
+          <div className="mx-auto flex max-w-6xl items-center justify-around px-2 py-3">
+            {navItems.map(({ label, path, icon: Icon }) => (
+              <NavLink
+                key={path}
+                to={path}
+                end={path === '/'}
+                onClick={closeSidebar}
+                className={({ isActive }) =>
+                  `flex flex-col items-center gap-1 rounded-xl px-3 py-1 text-xs font-medium transition-colors ${
+                    isActive
+                      ? 'text-indigo-600 dark:text-indigo-300'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200'
+                  }`
+                }
+              >
+                <Icon className="h-5 w-5" />
+                <span>{label}</span>
+              </NavLink>
+            ))}
+          </div>
+        </nav>
       </main>
     </div>
   );
