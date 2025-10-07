@@ -21,6 +21,7 @@ const mobileNavItems = [
   { label: 'Dashboard', path: '/', icon: FiBarChart2 },
   { label: 'Groups', path: '/groups', icon: FiUsers },
   { label: 'Expenses', path: '/expenses', icon: FiFileText },
+  { label: 'Settlements', path: '/settlements', icon: FiCheckCircle },
   { label: 'Settings', path: '/settings', icon: FiSettings }
 ];
 

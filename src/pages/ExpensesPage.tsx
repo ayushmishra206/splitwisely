@@ -1,20 +1,25 @@
-import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { FormEvent, ReactNode, useCallback, useEffect, useId, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import {
   FiAlertTriangle,
   FiCalendar,
+  FiChevronRight,
   FiDollarSign,
   FiEdit2,
   FiLoader,
   FiPlus,
+  FiZap,
   FiTrash2,
   FiUser,
-  FiUsers
+  FiUsers,
+  FiX
 } from 'react-icons/fi';
 import { ExpenseForm, type ExpenseFormValues } from '../components/expenses/ExpenseForm';
 import { useGroups } from '../hooks/useGroups';
 import { useExpenses } from '../hooks/useExpenses';
 import { computeEqualSplit, type ExpenseWithRelations, type SplitShareInput } from '../services/expenses';
+import type { GroupWithMembers } from '../services/groups';
+import { useSupabase } from '../providers/SupabaseProvider';
 
 interface LocationState {
   openCreate?: boolean;
@@ -32,6 +37,7 @@ interface ModalProps {
 }
 
 const Modal = ({ title, isOpen, onClose, children }: ModalProps) => {
+  const titleId = useId();
   useEffect(() => {
     if (!isOpen) {
       return;
@@ -50,30 +56,305 @@ const Modal = ({ title, isOpen, onClose, children }: ModalProps) => {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 px-4 py-6">
-      <div className="relative w-full max-w-2xl rounded-2xl border border-slate-200 bg-white p-5 shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:p-6">
-        <div className="flex items-start justify-between">
-          <div>
-            <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-100">{title}</h2>
-          </div>
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/60 px-3 py-4 sm:items-center sm:px-4 sm:py-6">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        className="relative flex w-full max-w-2xl flex-col overflow-hidden rounded-t-3xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-900 sm:max-h-[85vh] sm:rounded-2xl"
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800 sm:px-6">
+          <h2 id={titleId} className="text-base font-semibold text-slate-900 dark:text-slate-100 sm:text-lg">
+            {title}
+          </h2>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-transparent p-1 text-slate-500 transition hover:border-slate-200 hover:text-slate-800 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:text-slate-100"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-transparent text-slate-500 transition hover:border-slate-300 hover:text-slate-800 dark:text-slate-400 dark:hover:border-slate-700 dark:hover:text-slate-100"
             aria-label="Close dialog"
           >
-            ×
+            <FiX className="h-5 w-5" />
           </button>
         </div>
-        <div className="mt-6 max-h-[65vh] overflow-y-auto pr-1 sm:max-h-none sm:pr-0">{children}</div>
+        <div className="flex-1 overflow-y-auto px-5 py-4 sm:px-6 sm:py-5">{children}</div>
       </div>
     </div>
   );
 };
 
+interface QuickAddCardProps {
+  groups: GroupWithMembers[];
+  selectedGroupId: string;
+  currentUserId?: string;
+  isBusy: boolean;
+  onQuickSubmit: (values: ExpenseFormValues) => Promise<void> | void;
+  onOpenFullForm: (prefill?: Partial<ExpenseFormValues>) => void;
+}
+
+const defaultDate = () => new Date().toISOString().slice(0, 10);
+
+const QuickAddCard = ({ groups, selectedGroupId, currentUserId, isBusy, onQuickSubmit, onOpenFullForm }: QuickAddCardProps) => {
+  const [groupId, setGroupId] = useState<string>('');
+  const [description, setDescription] = useState<string>('');
+  const [amount, setAmount] = useState<string>('');
+  const [expenseDate, setExpenseDate] = useState<string>(() => defaultDate());
+  const [payerId, setPayerId] = useState<string>('');
+
+  const activeGroup = useMemo(() => groups.find((group) => group.id === groupId) ?? null, [groups, groupId]);
+  const participants = useMemo(() => activeGroup?.group_members ?? [], [activeGroup]);
+  const participantIds = useMemo(() => participants.map((member) => member.member_id), [participants]);
+  const currency = activeGroup?.currency ?? 'USD';
+
+  const quickPresets = useMemo(() => {
+    const uppercase = currency.toUpperCase();
+    if (uppercase === 'INR') {
+      return [200, 500, 750, 1000];
+    }
+    if (uppercase === 'EUR') {
+      return [20, 40, 60, 100];
+    }
+    if (uppercase === 'GBP') {
+      return [25, 50, 75, 120];
+    }
+    return [15, 30, 50, 100];
+  }, [currency]);
+
+  useEffect(() => {
+    if (!groups.length) {
+      setGroupId('');
+      setPayerId('');
+      return;
+    }
+    setGroupId((current) => {
+      if (current && groups.some((group) => group.id === current)) {
+        return current;
+      }
+      const fallback = groups.find((group) => group.id === selectedGroupId) ?? groups[0];
+      return fallback?.id ?? '';
+    });
+  }, [groups, selectedGroupId]);
+
+  useEffect(() => {
+    const memberIds = participants.map((member) => member.member_id);
+    if (!memberIds.length) {
+      setPayerId('');
+      return;
+    }
+    setPayerId((current) => {
+      if (current && memberIds.includes(current)) {
+        return current;
+      }
+      if (currentUserId && memberIds.includes(currentUserId)) {
+        return currentUserId;
+      }
+      return memberIds[0];
+    });
+  }, [participants, currentUserId]);
+
+  const canSubmit = Boolean(
+    groupId &&
+      payerId &&
+      participantIds.length &&
+      description.trim().length &&
+      parseCurrencyInput(amount || '0') > 0
+  );
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!canSubmit) {
+      return;
+    }
+    const trimmedDescription = description.trim();
+    const normalizedAmount = parseCurrencyInput(amount);
+    const payload: ExpenseFormValues = {
+      groupId,
+      description: trimmedDescription,
+      amount: normalizedAmount.toString(),
+      payerId,
+      participantIds,
+      splitMode: 'equal',
+      customSplits: {},
+      expenseDate,
+      notes: ''
+    };
+    try {
+      await onQuickSubmit(payload);
+      setDescription('');
+      setAmount('');
+      setExpenseDate(defaultDate());
+    } catch (error) {
+      console.error('Quick add failed', error);
+    }
+  };
+
+  return (
+    <section className="md:hidden">
+      <div className="rounded-3xl border border-indigo-200/60 bg-indigo-50/70 p-4 shadow-sm dark:border-indigo-500/30 dark:bg-indigo-950/30">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-indigo-400">Quick add</p>
+            <h2 className="mt-1 flex items-center gap-2 text-lg font-semibold text-indigo-900 dark:text-indigo-100">
+              <FiZap className="h-4 w-4" /> Log an expense fast
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              onOpenFullForm({
+                groupId: groupId || groups[0]?.id,
+                description: description.trim() || undefined,
+                amount: amount || undefined,
+                expenseDate
+              })
+            }
+            className="inline-flex items-center gap-1 rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-semibold uppercase tracking-wide text-indigo-600 shadow-sm transition hover:border-indigo-300 hover:text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-900/40 dark:text-indigo-200"
+          >
+            More options
+            <FiChevronRight className="h-3 w-3" />
+          </button>
+        </div>
+
+        <form className="mt-4 space-y-4" onSubmit={handleSubmit}>
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold uppercase tracking-[0.28em] text-indigo-500" htmlFor="quick-expense-group">
+              Group
+            </label>
+            <select
+              id="quick-expense-group"
+              value={groupId}
+              onChange={(event) => {
+                  setGroupId(event.target.value);
+              }}
+              className="w-full rounded-2xl border border-indigo-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/40 dark:border-indigo-500/40 dark:bg-indigo-950/60 dark:text-indigo-100"
+            >
+              <option value="" disabled>
+                Choose a group
+              </option>
+              {groups.map((group) => (
+                <option key={group.id} value={group.id}>
+                  {group.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-2">
+            <label className="block text-xs font-semibold uppercase tracking-[0.28em] text-indigo-500" htmlFor="quick-expense-description">
+              Description
+            </label>
+            <input
+              id="quick-expense-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              type="text"
+              inputMode="text"
+              placeholder="Dinner, taxi, groceries…"
+              className="w-full rounded-2xl border border-indigo-200 bg-white px-4 py-2 text-sm text-slate-800 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/40 dark:border-indigo-500/40 dark:bg-indigo-950/60 dark:text-indigo-100"
+            />
+          </div>
+
+          <div className="space-y-3">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-[0.28em] text-indigo-500" htmlFor="quick-expense-amount">
+                Amount
+              </label>
+              <input
+                id="quick-expense-amount"
+                value={amount}
+                onChange={(event) => setAmount(event.target.value)}
+                type="number"
+                min="0"
+                step="0.01"
+                inputMode="decimal"
+                placeholder="0.00"
+                className="w-full rounded-2xl border border-indigo-200 bg-white px-4 py-2 text-sm text-slate-800 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/40 dark:border-indigo-500/40 dark:bg-indigo-950/60 dark:text-indigo-100"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {quickPresets.map((preset) => (
+                <button
+                  type="button"
+                  key={preset}
+                  onClick={() => setAmount(preset.toString())}
+                  className="rounded-full border border-indigo-200 bg-white px-3 py-1 text-xs font-semibold text-indigo-600 shadow-sm transition hover:border-indigo-300 hover:text-indigo-700 dark:border-indigo-500/40 dark:bg-indigo-900/40 dark:text-indigo-200"
+                >
+                  {currency} {preset}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold uppercase tracking-[0.28em] text-indigo-500" htmlFor="quick-expense-date">
+                Date
+              </label>
+              <input
+                id="quick-expense-date"
+                type="date"
+                value={expenseDate}
+                max={defaultDate()}
+                onChange={(event) => setExpenseDate(event.target.value)}
+                className="w-full rounded-2xl border border-indigo-200 bg-white px-4 py-2 text-sm text-slate-800 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/40 dark:border-indigo-500/40 dark:bg-indigo-950/60 dark:text-indigo-100"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="block text-xs font-semibold uppercase tracking-[0.28em] text-indigo-500" htmlFor="quick-expense-payer">
+                Paid by
+              </label>
+              <select
+                id="quick-expense-payer"
+                value={payerId}
+                onChange={(event) => setPayerId(event.target.value)}
+                className="w-full rounded-2xl border border-indigo-200 bg-white px-4 py-2 text-sm text-slate-800 shadow-sm focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-300/40 dark:border-indigo-500/40 dark:bg-indigo-950/60 dark:text-indigo-100"
+                disabled={!participantIds.length}
+              >
+                <option value="" disabled>
+                  Choose
+                </option>
+                {participants.map((member) => {
+                  const label = member.profiles?.full_name ?? 'Member';
+                  return (
+                    <option key={member.member_id} value={member.member_id}>
+                      {label}
+                    </option>
+                  );
+                })}
+              </select>
+            </div>
+          </div>
+
+          <div className="rounded-2xl border border-indigo-200 bg-white px-4 py-3 text-xs text-indigo-700 shadow-sm dark:border-indigo-500/40 dark:bg-indigo-900/40 dark:text-indigo-200">
+            Splits evenly between {participantIds.length || '…'} participant{participantIds.length === 1 ? '' : 's'} in
+            {' '}
+            {activeGroup?.name ?? 'this group'}. Need custom shares? Use the advanced form.
+          </div>
+
+          <button
+            type="submit"
+            disabled={!canSubmit || isBusy}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:bg-indigo-400"
+          >
+            {isBusy ? <FiLoader className="h-4 w-4 animate-spin" /> : <FiPlus className="h-4 w-4" />} Record expense
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+};
+
+const parseCurrencyInput = (value: string | undefined | null): number => {
+  if (!value) {
+    return 0;
+  }
+  const sanitized = value.replace(/[^0-9.-]/g, '');
+  const parsed = Number.parseFloat(sanitized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
 const deriveSplits = (values: ExpenseFormValues): SplitShareInput[] => {
-  const amount = Number.parseFloat((values.amount ?? '0').trim());
-  if (!values.participantIds.length || Number.isNaN(amount) || amount <= 0) {
+  const amount = parseCurrencyInput(values.amount ?? '0');
+  if (!values.participantIds.length || amount <= 0) {
     return [];
   }
 
@@ -86,8 +367,7 @@ const deriveSplits = (values: ExpenseFormValues): SplitShareInput[] => {
   }
 
   return values.participantIds.map((memberId) => {
-    const raw = (values.customSplits?.[memberId] ?? '0').trim();
-    const parsed = Number.parseFloat(raw);
+    const parsed = parseCurrencyInput(values.customSplits?.[memberId] ?? '0');
     return {
       memberId,
       share: Number.isNaN(parsed) ? 0 : parsed
@@ -115,6 +395,7 @@ const ExpensesPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const locationState = (location.state as LocationState) ?? null;
+  const { user } = useSupabase();
   const [selectedGroupId, setSelectedGroupId] = useState<string>('all');
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingExpense, setEditingExpense] = useState<ExpenseWithRelations | null>(null);
@@ -169,6 +450,20 @@ const ExpensesPage = () => {
   const hasGroups = useMemo(() => groups.length > 0, [groups.length]);
   const hasExpenses = useMemo(() => expenses.length > 0, [expenses.length]);
 
+  const openCreateModal = useCallback(
+    (prefill: Partial<ExpenseFormValues> = {}) => {
+      if (!hasGroups) {
+        setStatus({ type: 'error', message: 'Create a group before adding expenses.' });
+        return;
+      }
+      setStatus(null);
+      setCreatePrefill(prefill);
+      setCreateKey(Date.now());
+      setIsCreateOpen(true);
+    },
+    [hasGroups, setStatus, setCreatePrefill, setCreateKey, setIsCreateOpen]
+  );
+
   const closeAllModals = useCallback(() => {
     setIsCreateOpen(false);
     setEditingExpense(null);
@@ -184,10 +479,14 @@ const ExpensesPage = () => {
         if (!splits.length) {
           throw new Error('Unable to calculate participant splits. Check the amount and selected members.');
         }
+        const normalizedAmount = parseCurrencyInput(values.amount);
+        if (normalizedAmount <= 0) {
+          throw new Error('Enter a positive amount for this expense.');
+        }
         await createExpense({
           groupId: values.groupId,
           description: values.description.trim(),
-          amount: Number.parseFloat(values.amount),
+          amount: normalizedAmount,
           payerId: values.payerId,
           splits,
           expenseDate: values.expenseDate,
@@ -217,11 +516,15 @@ const ExpensesPage = () => {
         if (!splits.length) {
           throw new Error('Unable to calculate participant splits. Check the amount and selected members.');
         }
+        const normalizedAmount = parseCurrencyInput(values.amount);
+        if (normalizedAmount <= 0) {
+          throw new Error('Enter a positive amount for this expense.');
+        }
         await updateExpense({
           id: editingExpense.id,
           groupId: values.groupId,
           description: values.description.trim(),
-          amount: Number.parseFloat(values.amount),
+          amount: normalizedAmount,
           payerId: values.payerId,
           splits,
           expenseDate: values.expenseDate,
@@ -403,19 +706,23 @@ const ExpensesPage = () => {
         </div>
         <button
           type="button"
-          onClick={() => {
-            if (!hasGroups) {
-              setStatus({ type: 'error', message: 'Create a group before adding expenses.' });
-              return;
-            }
-            setStatus(null);
-            setIsCreateOpen(true);
-          }}
+          onClick={() => openCreateModal()}
           className="hidden items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 md:inline-flex"
         >
           <FiPlus className="h-4 w-4" /> New expense
         </button>
       </header>
+
+      {hasGroups ? (
+        <QuickAddCard
+          groups={groups}
+          selectedGroupId={selectedGroupId === 'all' ? groups[0]?.id ?? '' : selectedGroupId}
+          currentUserId={user?.id}
+          isBusy={isSubmitting}
+          onQuickSubmit={handleCreate}
+          onOpenFullForm={(prefill) => openCreateModal(prefill)}
+        />
+      ) : null}
 
       {status ? (
         <div
@@ -567,10 +874,7 @@ const ExpensesPage = () => {
 
       <button
         type="button"
-        onClick={() => {
-          setStatus(null);
-          setIsCreateOpen(true);
-        }}
+        onClick={() => openCreateModal()}
         className="fixed bottom-20 right-4 z-40 inline-flex h-14 w-14 items-center justify-center rounded-full bg-indigo-600 text-white shadow-xl transition hover:bg-indigo-500 focus:outline-none focus:ring-4 focus:ring-indigo-500/40 md:hidden"
         aria-label="Record expense"
       >
