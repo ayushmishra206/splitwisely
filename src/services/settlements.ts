@@ -1,6 +1,7 @@
 import { supabase } from '../lib/supabaseClient';
 import type { Tables, TablesInsert, TablesUpdate } from '../lib/database.types';
 import type { ProfileSummary } from './groups';
+import { fetchGroupIdsForUser, getCurrentUserId } from './groups';
 
 export type SettlementRecord = Tables<'settlements'>;
 
@@ -29,11 +30,28 @@ export interface SettlementFilters {
 }
 
 export const fetchSettlements = async (filters: SettlementFilters = {}): Promise<SettlementWithRelations[]> => {
-  let query = supabase.from('settlements').select(settlementSelect).order('settlement_date', { ascending: false });
+  const userId = await getCurrentUserId();
+  const accessibleGroupIds = await fetchGroupIdsForUser(userId);
 
-  if (filters.groupId) {
-    query = query.eq('group_id', filters.groupId);
+  if (!accessibleGroupIds.length) {
+    return [];
   }
+
+  const targetGroupIds = filters.groupId
+    ? accessibleGroupIds.includes(filters.groupId)
+      ? [filters.groupId]
+      : []
+    : accessibleGroupIds;
+
+  if (!targetGroupIds.length) {
+    return [];
+  }
+
+  let query = supabase
+    .from('settlements')
+    .select(settlementSelect)
+    .in('group_id', targetGroupIds)
+    .order('settlement_date', { ascending: false });
 
   if (typeof filters.limit === 'number') {
     query = query.limit(filters.limit);
@@ -45,7 +63,8 @@ export const fetchSettlements = async (filters: SettlementFilters = {}): Promise
     throw error;
   }
 
-  return (data ?? []) as SettlementWithRelations[];
+  const rows = (data ?? []) as SettlementWithRelations[];
+  return rows.filter((settlement) => settlement.from_member === userId || settlement.to_member === userId);
 };
 
 export interface CreateSettlementInput {

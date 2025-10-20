@@ -93,7 +93,7 @@ function normalizeGroupMembers(group: GroupWithMembers, profileLookup: Map<strin
   };
 }
 
-async function getCurrentUserId() {
+export async function getCurrentUserId() {
   const {
     data: { user },
     error
@@ -110,10 +110,38 @@ async function getCurrentUserId() {
   return user.id;
 }
 
+export async function fetchGroupIdsForUser(userId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('group_members')
+    .select('group_id')
+    .eq('member_id', userId);
+
+  if (error) {
+    throw error;
+  }
+
+  const uniqueIds = new Set<string>();
+  (data ?? []).forEach((row) => {
+    if (row.group_id) {
+      uniqueIds.add(row.group_id);
+    }
+  });
+
+  return Array.from(uniqueIds);
+}
+
 export async function fetchGroups(): Promise<GroupWithMembers[]> {
+  const userId = await getCurrentUserId();
+  const groupIds = await fetchGroupIdsForUser(userId);
+
+  if (!groupIds.length) {
+    return [];
+  }
+
   const { data, error } = await supabase
     .from('groups')
     .select(groupSelect)
+    .in('id', groupIds)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -129,7 +157,7 @@ export async function fetchGroups(): Promise<GroupWithMembers[]> {
     const members = group.group_members ?? [];
     const hasOwnerMembership = members.some((member) => member.member_id === group.owner_id);
 
-    if (!hasOwnerMembership) {
+    if (!hasOwnerMembership && group.owner_id === userId) {
       ownerMembershipRows.push({
         group_id: group.id,
         member_id: group.owner_id,

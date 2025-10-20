@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabaseClient';
 import type { Tables, TablesInsert, TablesUpdate } from '../lib/database.types';
+import { fetchGroupIdsForUser, getCurrentUserId } from './groups';
 
 export type ExpenseRecord = Tables<'expenses'>;
 export type ExpenseSplitRecord = Tables<'expense_splits'> & {
@@ -43,19 +44,39 @@ export interface ExpenseFilters {
 }
 
 export const fetchExpenses = async (filters: ExpenseFilters = {}): Promise<ExpenseWithRelations[]> => {
-  let query = supabase.from('expenses').select(expenseSelect).order('expense_date', { ascending: false });
+  const userId = await getCurrentUserId();
+  const accessibleGroupIds = await fetchGroupIdsForUser(userId);
 
-  if (filters.groupId) {
-    query = query.eq('group_id', filters.groupId);
+  if (!accessibleGroupIds.length) {
+    return [];
   }
 
-  const { data, error } = await query;
+  const targetGroupIds = filters.groupId
+    ? accessibleGroupIds.includes(filters.groupId)
+      ? [filters.groupId]
+      : []
+    : accessibleGroupIds;
+
+  if (!targetGroupIds.length) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('expenses')
+    .select(expenseSelect)
+    .in('group_id', targetGroupIds)
+    .order('expense_date', { ascending: false });
 
   if (error) {
     throw error;
   }
 
-  return (data ?? []) as ExpenseWithRelations[];
+  const rows = (data ?? []) as ExpenseWithRelations[];
+  return rows.filter((expense) => {
+    const isPayer = expense.payer_id === userId;
+    const isParticipant = (expense.expense_splits ?? []).some((split) => split.member_id === userId);
+    return isPayer || isParticipant;
+  });
 };
 
 export interface SplitShareInput {
